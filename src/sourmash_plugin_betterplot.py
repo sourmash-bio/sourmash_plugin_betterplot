@@ -116,9 +116,6 @@ def plot_composite_matrix(
             D -= D.min()
             D /= D.max()
 
-    if show_labels:
-        pass
-
     fig = pylab.figure(figsize=(11, 8))
     ax1 = fig.add_axes([0.09, 0.1, 0.2, 0.6])
 
