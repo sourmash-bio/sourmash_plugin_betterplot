@@ -1,4 +1,7 @@
-*~
-__pycache__
-*.egg-info/
+dist
+.snakemake
 build
+__pycache__
+src/sourmash_plugin_betterplot.egg-info/
+*.cmp
+*.labels.txt
