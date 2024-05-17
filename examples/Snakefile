@@ -1,9 +1,11 @@
 sketches_3 = ["2", "47", "63"]
+sketches_10 = ["2", "47", "48", "49", "51", "52", "53", "59", "60", "63"]
 
 rule all:
     input:
         "plot2.3sketches.cmp.png",
         "plot2.cut.3sketches.cmp.png",
+        "plot2.cut.10sketches.cmp.png",
 
 rule cmp_3sketches:
     input:
@@ -11,26 +13,54 @@ rule cmp_3sketches:
     output:
         cmp="3sketches.cmp",
         labels="3sketches.cmp.labels.txt",
+        labels_csv="3sketches.cmp.labels_to.csv",
     shell: """
-        sourmash compare {input} -o {output.cmp}
+        sourmash compare {input} -o {output.cmp} \
+           --labels-to {output.labels_csv}
     """
 
 rule plot2_3sketches:
     input:
         cmp="3sketches.cmp",
-        labels="3sketches.cmp.labels.txt",
+        labels="3sketches.cmp.labels_to.csv",
     output:
         "plot2.3sketches.cmp.png",
     shell: """
-        sourmash scripts plot2 {input.cmp} -o {output}
+        sourmash scripts plot2 {input.cmp} {input.labels} -o {output} \
+             --figsize-x=5 --figsize-y=3
     """
 
 rule plot2_3sketches_cut:
     input:
         cmp="3sketches.cmp",
-        labels="3sketches.cmp.labels.txt",
+        labels="3sketches.cmp.labels_to.csv",
     output:
         "plot2.cut.3sketches.cmp.png",
     shell: """
-        sourmash scripts plot2 {input.cmp} -o {output} --cut-point=1.2
+        sourmash scripts plot2 {input.cmp} {input.labels} -o {output} \
+            --cut-point=1.2 --figsize-x=5 --figsize-y=3
+    """
+
+
+rule cmp_10sketches:
+    input:
+        expand("sketches/{n}.sig.zip", n=sketches_10)
+    output:
+        cmp="10sketches.cmp",
+        labels="10sketches.cmp.labels.txt",
+        labels_csv="10sketches.cmp.labels_to.csv",
+    shell: """
+        sourmash compare {input} -o {output.cmp} \
+           --labels-to {output.labels_csv}
+    """
+
+rule plot2_10sketches_cut:
+    input:
+        cmp="10sketches.cmp",
+        labels="10sketches.cmp.labels_to.csv",
+    output:
+        "plot2.cut.10sketches.cmp.png",
+    shell: """
+        sourmash scripts plot2 {input.cmp} {input.labels} -o {output} \
+            --cut-point=1.35 --cluster-out --figsize-x=5 --figsize-y=3
     """
