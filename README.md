@@ -79,6 +79,9 @@ sourmash scripts plot2 10sketches.cmp 10sketches.cmp.labels_to.csv \
     -o plot2.cut.10sketches.cmp.png \
     --cut-point=1.35 --cluster-out
 ```
+yields:
+
+![10-sketches example w/cut line](examples/plot2.cut.10sketches.cmp.png)
 
 ## Support
 
