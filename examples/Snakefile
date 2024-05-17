@@ -26,7 +26,8 @@ rule plot2_3sketches:
     output:
         "plot2.3sketches.cmp.png",
     shell: """
-        sourmash scripts plot2 {input.cmp} {input.labels} -o {output}
+        sourmash scripts plot2 {input.cmp} {input.labels} -o {output} \
+             --figsize-x=5 --figsize-y=3
     """
 
 rule plot2_3sketches_cut:
@@ -37,7 +38,7 @@ rule plot2_3sketches_cut:
         "plot2.cut.3sketches.cmp.png",
     shell: """
         sourmash scripts plot2 {input.cmp} {input.labels} -o {output} \
-            --cut-point=1.2
+            --cut-point=1.2 --figsize-x=5 --figsize-y=3
     """
 
 
@@ -61,5 +62,5 @@ rule plot2_10sketches_cut:
         "plot2.cut.10sketches.cmp.png",
     shell: """
         sourmash scripts plot2 {input.cmp} {input.labels} -o {output} \
-            --cut-point=1.35 --cluster-out
+            --cut-point=1.35 --cluster-out --figsize-x=5 --figsize-y=3
     """

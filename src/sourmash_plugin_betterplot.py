@@ -56,6 +56,8 @@ class Command_Plot2(CommandLinePlugin):
             type=float,
             help="upper limit of heatmap scale; default=%(default)f",
         )
+        subparser.add_argument("--figsize-x", type=int, default=11)
+        subparser.add_argument("--figsize-y", type=int, default=8)
         subparser.add_argument(
             "--subsample",
             type=int,
@@ -93,7 +95,7 @@ class Command_Plot2(CommandLinePlugin):
 
 def plot_composite_matrix(
     D, labelinfo, show_labels=True, vmax=1.0, vmin=0.0, force=False,
-    cut_point=None,    
+        cut_point=None, figsize_x=11, figsize_y=8,
 ):
     """Build a composite plot showing dendrogram + distance matrix/heatmap.
 
@@ -115,7 +117,7 @@ def plot_composite_matrix(
             D -= D.min()
             D /= D.max()
 
-    fig = pylab.figure(figsize=(11, 8))
+    fig = pylab.figure(figsize=(figsize_x, figsize_y))
     ax1 = fig.add_axes([0.09, 0.1, 0.2, 0.6])
 
     # plot dendrogram
@@ -221,6 +223,8 @@ def plot(args):
         vmax=args.vmax,
         force=args.force,
         cut_point=args.cut_point,
+        figsize_x=args.figsize_x,
+        figsize_y=args.figsize_y,
     )
     fig.savefig(args.output_figure, bbox_inches='tight')
     notify(f"wrote numpy distance matrix to: {args.output_figure}")
