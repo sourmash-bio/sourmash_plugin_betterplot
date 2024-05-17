@@ -1,0 +1,25 @@
+sketches_3 = ["2", "47", "63"]
+
+rule all:
+    input:
+        "plot2.3sketches.cmp.png"
+
+rule cmp_3sketches:
+    input:
+        expand("sketches/{n}.sig.zip", n=sketches_3)
+    output:
+        cmp="3sketches.cmp",
+        labels="3sketches.cmp.labels.txt",
+    shell: """
+        sourmash compare {input} -o {output.cmp}
+    """
+
+rule plot2_3sketches:
+    input:
+        cmp="3sketches.cmp",
+        labels="3sketches.cmp.labels.txt",
+    output:
+        "plot2.3sketches.cmp.png",
+    shell: """
+        sourmash scripts plot2 {input.cmp} -o {output}
+    """
