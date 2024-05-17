@@ -18,6 +18,8 @@ import numpy
 import pylab
 import scipy.cluster.hierarchy as sch
 
+from collections import defaultdict
+
 from sourmash.logging import debug_literal, error, notify, print_results
 from sourmash.plugins import CommandLinePlugin
 
@@ -86,7 +88,7 @@ class Command_Plot2(CommandLinePlugin):
 
 
 def plot_composite_matrix(
-    D, labeltext, show_labels=True, vmax=1.0, vmin=0.0, force=False,
+    D, labelinfo, show_labels=True, vmax=1.0, vmin=0.0, force=False,
     cut_point=None,    
 ):
     """Build a composite plot showing dendrogram + distance matrix/heatmap.
@@ -120,6 +122,7 @@ def plot_composite_matrix(
         cut_point = float(cut_point)
         dend_kwargs = dict(color_threshold=float(cut_point))
         
+    labeltext = [ row['label'] for row in labelinfo ]
     Z1 = sch.dendrogram(
         Y,
         orientation="left",
@@ -138,9 +141,7 @@ def plot_composite_matrix(
         xstart = 0.315
     scale_xstart = xstart + width + 0.01
 
-    # re-order labels along rows, top to bottom
     idx1 = Z1["leaves"]
-    reordered_labels = [labeltext[i] for i in idx1]
 
     # reorder D by the clustering in the dendrogram
     D = D[idx1, :]
@@ -159,7 +160,7 @@ def plot_composite_matrix(
     axcolor = fig.add_axes([scale_xstart, 0.1, 0.02, 0.6])
     pylab.colorbar(im, cax=axcolor)
 
-    return fig, reordered_labels, D
+    return fig, Y, D
 
 
 def plot(args):
@@ -184,7 +185,6 @@ def plot(args):
     with sourmash_args.FileInputCSV(labelfilename) as r:
         labelinfo = list(r)
         labelinfo.sort(key=lambda row: int(row['sort_order']))
-    labeltext = [ row['label'] for row in labelinfo ]
 
     if len(labelinfo) != D.shape[0]:
         error("{} labels != matrix size, exiting", len(labeltext))
@@ -200,18 +200,18 @@ def plot(args):
     if args.subsample:
         numpy.random.seed(args.subsample_seed)
 
-        sample_idx = list(range(len(labeltext)))
+        sample_idx = list(range(len(labelinfo)))
         numpy.random.shuffle(sample_idx)
         sample_idx = sample_idx[: args.subsample]
 
         np_idx = numpy.array(sample_idx)
         D = D[numpy.ix_(np_idx, np_idx)]
-        labeltext = [labeltext[idx] for idx in sample_idx]
+        labelinfo = [labelinfo[idx] for idx in sample_idx]
 
     ### make the dendrogram+matrix:
-    (fig, rlabels, rmat) = plot_composite_matrix(
+    (fig, linkage_Z, rmat) = plot_composite_matrix(
         D,
-        labeltext,
+        labelinfo,
         show_labels=display_labels,
         vmin=args.vmin,
         vmax=args.vmax,
@@ -220,3 +220,27 @@ def plot(args):
     )
     fig.savefig(args.output_figure, bbox_inches='tight')
     notify(f"wrote numpy distance matrix to: {args.output_figure}")
+
+    # re-order labels along rows, top to bottom
+    #reordered_labels = [labelinfo[i] for i in idx1]
+
+    # output reordered labels with their clusters?
+    if args.cut_point is not None:
+        cut_point = float(args.cut_point)
+        # @CTB 'distance'...
+        assignments = sch.fcluster(linkage_Z, cut_point, 'distance')
+
+        print(assignments)
+
+        cluster_d = defaultdict(list)
+        for cluster_n, label_row in zip(assignments, labelinfo):
+            cluster_d[cluster_n].append(label_row)
+
+        for k, v in cluster_d.items():
+            print(f"cluster {k}")
+            for row in v:
+                print(f"\t{row['label']}")
+
+            with open(f"cluster.{k}.list", "w") as fp:
+                for row in v:
+                    fp.write(f"{row['signature_file']}\n")

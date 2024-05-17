@@ -6,3 +6,4 @@ src/sourmash_plugin_betterplot.egg-info/
 *.cmp
 *.labels.txt
 *.csv
+*~
