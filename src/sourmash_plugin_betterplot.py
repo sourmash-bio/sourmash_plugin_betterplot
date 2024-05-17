@@ -75,6 +75,10 @@ class Command_Plot2(CommandLinePlugin):
             "--labels-load",
             help="a CSV file containing label information to use on plot; implies --labels",
         )
+        subparser.add_argument(
+            "--cut-point", type=float,
+            help="cut point for dendrogram, to produce clusters"
+        )
 
     def main(self, args):
         # code that we actually run.
@@ -94,7 +98,8 @@ def load_matrix_and_labels(basefile):
 
 
 def plot_composite_matrix(
-    D, labeltext, show_labels=True, vmax=1.0, vmin=0.0, force=False
+    D, labeltext, show_labels=True, vmax=1.0, vmin=0.0, force=False,
+    cut_point=None,    
 ):
     """Build a composite plot showing dendrogram + distance matrix/heatmap.
 
@@ -122,6 +127,11 @@ def plot_composite_matrix(
     # plot dendrogram
     Y = sch.linkage(D, method="single")  # centroid
 
+    dend_kwargs = {}
+    if cut_point is not None:
+        cut_point = float(cut_point)
+        dend_kwargs = dict(color_threshold=float(cut_point))
+        
     Z1 = sch.dendrogram(
         Y,
         orientation="left",
@@ -130,6 +140,9 @@ def plot_composite_matrix(
         get_leaves=True,
     )
     ax1.set_xticks([])
+
+    if cut_point is not None:
+        ax1.axvline(x=cut_point, c='red')
 
     xstart = 0.45
     width = 0.45
@@ -229,6 +242,7 @@ def plot(args):
         vmin=args.vmin,
         vmax=args.vmax,
         force=args.force,
+        cut_point=args.cut_point,
     )
     fig.savefig(args.output_figure, bbox_inches='tight')
     notify(f"wrote numpy distance matrix to: {args.output_figure}")

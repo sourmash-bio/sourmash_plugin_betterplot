@@ -2,7 +2,8 @@ sketches_3 = ["2", "47", "63"]
 
 rule all:
     input:
-        "plot2.3sketches.cmp.png"
+        "plot2.3sketches.cmp.png",
+        "plot2.cut.3sketches.cmp.png",
 
 rule cmp_3sketches:
     input:
@@ -22,4 +23,14 @@ rule plot2_3sketches:
         "plot2.3sketches.cmp.png",
     shell: """
         sourmash scripts plot2 {input.cmp} -o {output}
+    """
+
+rule plot2_3sketches_cut:
+    input:
+        cmp="3sketches.cmp",
+        labels="3sketches.cmp.labels.txt",
+    output:
+        "plot2.cut.3sketches.cmp.png",
+    shell: """
+        sourmash scripts plot2 {input.cmp} -o {output} --cut-point=1.2
     """
