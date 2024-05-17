@@ -43,6 +43,9 @@ of the repository after installing the plugin.
 
 ### Basic 3 sketches example: plot2
 
+Compare 3 sketches, and cluster.
+
+This command:
 ```
 sourmash compare sketches/{2,47,63}.sig.zip -o 3sketches.cmp
     --labels-to 3sketches.cmp.labels_to.csv
@@ -50,12 +53,16 @@ sourmash compare sketches/{2,47,63}.sig.zip -o 3sketches.cmp
 sourmash scripts plot2 3sketches.cmp 3sketches.cmp.labels_to.csv \
     -o examples/plot2.3sketches.cmp.png
 ```
-yields:
+
+produces this plot:
 
 ![basic 3-sketches example](examples/plot2.3sketches.cmp.png)
 
 ### 3 sketches example with a cut line: plot2 --cut-point 1.2
 
+Compare 3 sketches, cluster, and show a cut point.
+
+This command:
 ```
 sourmash compare sketches/{2,47,63}.sig.zip -o 3sketches.cmp
     --labels-to 3sketches.cmp.labels_to.csv
@@ -64,12 +71,17 @@ sourmash scripts plot2 3sketches.cmp 3sketches.cmp.labels_to_csv \
     -o examples/plot2.cut.3sketches.cmp.png \
     --cut-point=1.2
 ```
-yields:
+
+produces this plot:
 
 ![3-sketches example w/cut line](examples/plot2.cut.3sketches.cmp.png)
 
 ### 10 sketches with a cut line + cluster extraction
 
+Compare 10 sketches, cluster, and use a cut point to extract
+multiple clusters.
+
+This command:
 ```
 sourmash compare sketches/{2,47,48,49,51,52,53,59,60}.sig.zip \
     -o 10sketches.cmp \
@@ -79,9 +91,12 @@ sourmash scripts plot2 10sketches.cmp 10sketches.cmp.labels_to.csv \
     -o plot2.cut.10sketches.cmp.png \
     --cut-point=1.35 --cluster-out
 ```
-yields:
+
+produces this plot:
 
 ![10-sketches example w/cut line](examples/plot2.cut.10sketches.cmp.png)
+
+as well as this set of clusters @CTB.
 
 ## Support
 
