@@ -29,6 +29,52 @@ from sourmash.plugins import CommandLinePlugin
 
 ###
 
+
+def load_labelinfo_csv(filename):
+    with sourmash_args.FileInputCSV(filename) as r:
+        labelinfo = list(r)
+
+    labelinfo.sort(key=lambda row: int(row['sort_order']))
+    return labelinfo
+
+
+def load_categories_csv(filename, labelinfo):
+    with sourmash_args.FileInputCSV(filename) as r:
+        categories = list(r)
+
+    category_map = {}
+    if categories:
+        assert labelinfo
+        keys = set(categories[0].keys())
+        keys -= { "category" }
+
+        key = None
+        for k in keys:
+            if k in labelinfo[0].keys():
+                notify(f"found category key: {k}")
+                key = k
+                break
+
+        if key:
+            category_values = list(set([ row["category"] for row in categories ]))
+            cat_colors = list(map(plt.cm.tab10, range(len(category_values))))
+            category_map = {}
+            for v, color in zip(category_values, cat_colors):
+                category_map[v] = color
+
+            category_map2 = {}
+            for row in categories:
+                category_map2[row[key]] = category_map[row['category']]
+
+            colors = []
+            for row in labelinfo:
+                value = row[key]
+                color = category_map2[value]
+                colors.append(color)
+        
+    return category_map, colors
+
+
 #
 # CLI plugin - supports 'sourmash scripts plot2'
 #
@@ -190,10 +236,7 @@ def plot2(args):
     labelfilename = args.labels_from
     notify(f"loading labels from CSV file '{labelfilename}'")
 
-    labelinfo = []
-    with sourmash_args.FileInputCSV(labelfilename) as r:
-        labelinfo = list(r)
-        labelinfo.sort(key=lambda row: int(row['sort_order']))
+    labelinfo = load_labelinfo_csv(labelfilename)
 
     if len(labelinfo) != D.shape[0]:
         error("{} labels != matrix size, exiting", len(labeltext))
@@ -267,7 +310,12 @@ class Command_MDS(CommandLinePlugin):
     def __init__(self, subparser):
         super().__init__(subparser)
 
-        subparser.add_argument('comparison_matrix')
+        subparser.add_argument('comparison_matrix',
+                               help="output from 'sourmash compare'")
+        subparser.add_argument('labels_from',
+                               help="output from 'sourmash compare --labels-to'")
+        subparser.add_argument('-C', '--categories-csv',
+                               help="CSV mapping label columns to categories")
         subparser.add_argument('-o', '--output-figure', required=True)
 
     def main(self, args):
@@ -277,12 +325,19 @@ class Command_MDS(CommandLinePlugin):
         with open(args.comparison_matrix, 'rb') as f:
             mat = numpy.load(f)
 
+        labelinfo = load_labelinfo_csv(args.labels_from)
+        categories_map = None
+        colors = None
+        if args.categories_csv:
+            categories_map, colors = load_categories_csv(args.categories_csv,
+                                                         labelinfo)
+
         # Example usage
         # Assume object indices instead of names for simplicity
         #similarity_tuples = [(0, 1, 0.7), (0, 2, 0.4), (1, 2, 0.5)]
         #num_objects = 3  # You should know the total number of objects
         #sparse_matrix = create_sparse_similarity_matrix(similarity_tuples, num_objects)
-        plot_mds_sparse(mat)
+        plot_mds_sparse(mat, labelinfo, colors=colors)
 
         plt.savefig(args.output_figure)
 
@@ -303,13 +358,14 @@ def create_sparse_similarity_matrix(tuples, num_objects):
     return similarity_matrix.tocsr()
 
 
-def plot_mds_sparse(matrix):
+def plot_mds_sparse(matrix, labelinfo, *, colors=None):
     # Convert sparse similarity to dense dissimilarity matrix
     #dissimilarities = 1 - matrix.toarray()
     dissimilarities = 1 - matrix
+
     mds = MDS(n_components=2, dissimilarity='precomputed', random_state=42)
     mds_coords = mds.fit_transform(dissimilarities)
-    plt.scatter(mds_coords[:, 0], mds_coords[:, 1])
+    plt.scatter(mds_coords[:, 0], mds_coords[:, 1], color=colors)
     plt.title('MDS Plot')
     plt.xlabel('Dimension 1')
     plt.ylabel('Dimension 2')

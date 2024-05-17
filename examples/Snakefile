@@ -69,8 +69,9 @@ rule plot2_10sketches_cut:
 rule mds_10sketches:
     input:
         cmp="10sketches.cmp",
+        labels="10sketches.cmp.labels_to.csv",
     output:
         "mds.10sketches.cmp.png"
     shell: """
-        sourmash scripts mds {input} -o {output}
+        sourmash scripts mds {input.cmp} {input.labels} -o {output}
     """
