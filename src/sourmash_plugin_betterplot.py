@@ -85,17 +85,6 @@ class Command_Plot2(CommandLinePlugin):
         plot(args)
 
 
-
-def load_matrix_and_labels(basefile):
-    """Load the comparison matrix and associated labels.
-
-    Returns a square numpy matrix & list of labels.
-    """
-    D = numpy.load(open(basefile, "rb"))
-    labeltext = [x.strip() for x in open(basefile + ".labels.txt")]
-    return (D, labeltext)
-
-
 def plot_composite_matrix(
     D, labeltext, show_labels=True, vmax=1.0, vmin=0.0, force=False,
     cut_point=None,    
@@ -177,10 +166,7 @@ def plot(args):
     "Produce a clustering matrix and plot."
     import matplotlib as mpl
 
-    mpl.use("Agg")
-    import numpy
-    import pylab
-    import scipy.cluster.hierarchy as sch
+    #mpl.use("Agg")
 
     # load files
     D_filename = args.distances
@@ -188,22 +174,19 @@ def plot(args):
     notify(f"loading comparison matrix from {D_filename}...")
     with open(D_filename, "rb") as f:
         D = numpy.load(f)
-    # not sure how to change this to use f-strings
-    notify("...got {} x {} matrix.", *D.shape)
+    notify(f"...got {D.shape[0]} x {D.shape[1]} matrix.", *D.shape)
 
     display_labels = True
     labelfilename = args.labels_from
     notify(f"loading labels from CSV file '{labelfilename}'")
 
-    labeltext = []
+    labelinfo = []
     with sourmash_args.FileInputCSV(labelfilename) as r:
-        for row in r:
-            order, label = row["sort_order"], row["label"]
-            labeltext.append((int(order), label))
-    labeltext.sort()
-    labeltext = [t[1] for t in labeltext]
+        labelinfo = list(r)
+        labelinfo.sort(key=lambda row: int(row['sort_order']))
+    labeltext = [ row['label'] for row in labelinfo ]
 
-    if len(labeltext) != D.shape[0]:
+    if len(labelinfo) != D.shape[0]:
         error("{} labels != matrix size, exiting", len(labeltext))
         sys.exit(-1)
 
@@ -224,7 +207,6 @@ def plot(args):
         np_idx = numpy.array(sample_idx)
         D = D[numpy.ix_(np_idx, np_idx)]
         labeltext = [labeltext[idx] for idx in sample_idx]
-
 
     ### make the dendrogram+matrix:
     (fig, rlabels, rmat) = plot_composite_matrix(
