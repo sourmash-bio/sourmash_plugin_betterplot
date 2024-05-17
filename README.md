@@ -1,54 +1,48 @@
-# sourmash_plugin_xyz: a template for sourmash plugins
+# sourmash_plugin_betterplot
 
-This is a good place to start if you're writing a plugin for
-[sourmash (sourmash-bio/sourmash/)](https://github.com/sourmash-bio/sourmash/).
+## What is this?
 
-Note: plugins were added in [sourmash v4.7.0](https://github.com/sourmash-bio/sourmash/releases/tag/v4.7.0).
-
-## Instructions
-
-You can use this repo as a template repo to create a new plugin!
-
-See [this set of changes](https://github.com/ctb/sourmash_plugin_template_test1/pull/1) for the minimal diff needed to get a plugin working!
-
-### Building from a template:
-
-First, go to [the GitHub page](https://github.com/sourmash-bio/sourmash_plugin_template) and click "Use this template" to create a new repository.
-
-Clone that repository into your development space.
-
-Then, search for all places where 'xyz' is present, and replace
-'xyz' with the name of your plugin.
-
-Next, edit the code in `src/sourmash_plugin_xyz.py` to implement the plugin
-(you'll probably want to change the name of that file, too.)
-
-Then run `pip install .` to install and test your plugin! You can also
-run `pip install -e .` to install it in editable mode, which is more
-convenient for development.
-
-## Examples
-
-[sourmash_plugin_avro](https://github.com/sourmash-bio/sourmash_plugin_avro)
+[`sourmash compare`](https://sourmash.readthedocs.io/en/latest/command-line.html#sourmash-compare-compare-many-signatures)
 and
-[sourmash_plugin_load_urls](https://github.com/sourmash-bio/sourmash_plugin_load_urls)
-are two examples you can follow.
+[`sourmash plot`](https://sourmash.readthedocs.io/en/latest/command-line.html#sourmash-plot-cluster-and-visualize-comparisons-of-many-signatures)
+produce basic distance matrix plots that are useful for comparing and
+visualizing the relationships between dozens to hundreds of
+genomes. And this is one of the most popular use cases for sourmash!
 
-## Template docs for new plugin built from this template.
+But! The visualization could be improved a lot beyond the basic viz
+that `sourmash plot` produces, and there are a lot of only slightly
+more complicated use cases for comparing, clustering, and visualizing
+many genomes!
 
-Delete everything from this line on up and put in your new README ;).
+This plugin will explore these use cases!
 
-# sourmash_plugin_xyz
+Specific goals:
+
+* provide a variety of plotting and exploration commands that can be used
+  with sourmash tools;
+* provide both command-line functionality _and_ functions that can be
+  imported and used in Jupyter notebooks;
+* (maybe) explore other backends than matplotlib;
+
+and who knows what else??
 
 ## Installation
 
 ```
-pip install sourmash_plugin_xyz
+pip install sourmash_plugin_betterplot
 ```
 
 ## Usage
 
-non-xyz info goes here!
+@CTB: info goes here!
+
+## Examples
+
+```
+sourmash scripts plot2 3sketches.cmp -o examples/plot2.3sketches.cmp.png
+```
+yields:
+![examples/plot2.3sketches.cmp.png](examples/plot2.3sketches.cmp.png)
 
 ## Support
 
@@ -56,7 +50,7 @@ We suggest filing issues in [the main sourmash issue tracker](https://github.com
 
 ## Dev docs
 
-`xyz` is developed at https://github.com/sourmash-bio/sourmash_plugin_template.
+`betterplot` is developed at https://github.com/sourmash-bio/sourmash_plugin_betterplot.
 
 ### Testing
 
@@ -78,3 +72,7 @@ python -m build
 ```
 
 followed by `twine upload dist/...`.
+
+---
+
+CTB May 2024
