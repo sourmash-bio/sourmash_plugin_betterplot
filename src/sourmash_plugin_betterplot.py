@@ -80,6 +80,10 @@ class Command_Plot2(CommandLinePlugin):
             "--cut-point", type=float,
             help="cut point for dendrogram, to produce clusters"
         )
+        subparser.add_argument(
+            "--cluster-out", action='store_true',
+            help="output clusters"
+        )
 
     def main(self, args):
         # code that we actually run.
@@ -130,7 +134,7 @@ def plot_composite_matrix(
         no_labels=not show_labels,
         get_leaves=True,
     )
-    ax1.set_xticks([])
+    #ax1.set_xticks([])
 
     if cut_point is not None:
         ax1.axvline(x=cut_point, c='red', linestyle='dashed')
@@ -225,7 +229,7 @@ def plot(args):
     #reordered_labels = [labelinfo[i] for i in idx1]
 
     # output reordered labels with their clusters?
-    if args.cut_point is not None:
+    if args.cut_point is not None and args.cluster_out:
         cut_point = float(args.cut_point)
         # @CTB 'distance'...
         assignments = sch.fcluster(linkage_Z, cut_point, 'distance')
