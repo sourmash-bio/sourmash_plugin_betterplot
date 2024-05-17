@@ -11,26 +11,29 @@ rule cmp_3sketches:
     output:
         cmp="3sketches.cmp",
         labels="3sketches.cmp.labels.txt",
+        labels_csv="3sketches.cmp.labels_to.csv",
     shell: """
-        sourmash compare {input} -o {output.cmp}
+        sourmash compare {input} -o {output.cmp} \
+           --labels-to {output.labels_csv}
     """
 
 rule plot2_3sketches:
     input:
         cmp="3sketches.cmp",
-        labels="3sketches.cmp.labels.txt",
+        labels="3sketches.cmp.labels_to.csv",
     output:
         "plot2.3sketches.cmp.png",
     shell: """
-        sourmash scripts plot2 {input.cmp} -o {output}
+        sourmash scripts plot2 {input.cmp} {input.labels} -o {output}
     """
 
 rule plot2_3sketches_cut:
     input:
         cmp="3sketches.cmp",
-        labels="3sketches.cmp.labels.txt",
+        labels="3sketches.cmp.labels_to.csv",
     output:
         "plot2.cut.3sketches.cmp.png",
     shell: """
-        sourmash scripts plot2 {input.cmp} -o {output} --cut-point=1.2
+        sourmash scripts plot2 {input.cmp} {input.labels} -o {output} \
+            --cut-point=1.2
     """

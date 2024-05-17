@@ -38,10 +38,17 @@ pip install sourmash_plugin_betterplot
 
 ## Examples
 
+The command lines below are executable in the `examples/` subdirectory
+of the repository after installing the plugin.
+
 ### Basic 3 sketches example: plot2
 
 ```
-sourmash scripts plot2 3sketches.cmp -o examples/plot2.3sketches.cmp.png
+sourmash compare sketches/{2,47,63}.sig.zip -o 3sketches.cmp
+    --labels-to 3sketches.cmp.labels_to.csv
+
+sourmash scripts plot2 3sketches.cmp 3sketches.cmp.labels_to.csv \
+    -o examples/plot2.3sketches.cmp.png
 ```
 yields:
 
@@ -50,7 +57,11 @@ yields:
 ### 3 sketches example with a cut line: plot2 --cut-point 1.2
 
 ```
-sourmash scripts plot2 3sketches.cmp -o examples/plot2.cut.3sketches.cmp.png \
+sourmash compare sketches/{2,47,63}.sig.zip -o 3sketches.cmp
+    --labels-to 3sketches.cmp.labels_to.csv
+
+sourmash scripts plot2 3sketches.cmp 3sketches.cmp.labels_to_csv \
+    -o examples/plot2.cut.3sketches.cmp.png \
     --cut-point=1.2
 ```
 yields:

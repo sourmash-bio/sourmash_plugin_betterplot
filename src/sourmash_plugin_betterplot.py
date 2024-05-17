@@ -11,6 +11,7 @@ Need help? Have questions? Ask at http://github.com/sourmash-bio/sourmash/issues
 
 import argparse
 import sourmash
+from sourmash import sourmash_args
 import os
 
 import numpy
@@ -37,7 +38,10 @@ class Command_Plot2(CommandLinePlugin):
     def __init__(self, subparser):
         super().__init__(subparser)
         # add argparse arguments here.
-        subparser.add_argument("distances", help='output from "sourmash compare"')
+        subparser.add_argument("distances",
+                               help='output from "sourmash compare"')
+        subparser.add_argument("labels_from",
+                               help='output from "sourmash compare --labels-to"')
         subparser.add_argument(
             "--vmin",
             default=0.0,
@@ -69,11 +73,6 @@ class Command_Plot2(CommandLinePlugin):
         subparser.add_argument(
             "-o", "--output-figure", help="output figure to this file",
             required=True
-        )
-        subparser.add_argument(
-            "--labels-from",
-            "--labels-load",
-            help="a CSV file containing label information to use on plot; implies --labels",
         )
         subparser.add_argument(
             "--cut-point", type=float,
@@ -193,27 +192,20 @@ def plot(args):
     notify("...got {} x {} matrix.", *D.shape)
 
     display_labels = True
-    if args.labels_from:
-        labelfilename = args.labels_from
-        notify(f"loading labels from CSV file '{labelfilename}'")
+    labelfilename = args.labels_from
+    notify(f"loading labels from CSV file '{labelfilename}'")
 
-        labeltext = []
-        with sourmash_args.FileInputCSV(labelfilename) as r:
-            for row in r:
-                order, label = row["sort_order"], row["label"]
-                labeltext.append((int(order), label))
-        labeltext.sort()
-        labeltext = [t[1] for t in labeltext]
-    else:
-        labelfilename = D_filename + ".labels.txt"
+    labeltext = []
+    with sourmash_args.FileInputCSV(labelfilename) as r:
+        for row in r:
+            order, label = row["sort_order"], row["label"]
+            labeltext.append((int(order), label))
+    labeltext.sort()
+    labeltext = [t[1] for t in labeltext]
 
-        notify(f"loading labels from text file '{labelfilename}'")
-        with open(labelfilename) as f:
-            labeltext = [x.strip() for x in f]
-
-        if len(labeltext) != D.shape[0]:
-            error("{} labels != matrix size, exiting", len(labeltext))
-            sys.exit(-1)
+    if len(labeltext) != D.shape[0]:
+        error("{} labels != matrix size, exiting", len(labeltext))
+        sys.exit(-1)
 
     ### make the dendrogram:
     fig = pylab.figure(figsize=(8, 5))
