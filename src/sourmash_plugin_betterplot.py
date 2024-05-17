@@ -233,5 +233,5 @@ def plot(args):
         vmax=args.vmax,
         force=args.force,
     )
-    fig.savefig(args.output_figure)
+    fig.savefig(args.output_figure, bbox_inches='tight')
     notify(f"wrote numpy distance matrix to: {args.output_figure}")
