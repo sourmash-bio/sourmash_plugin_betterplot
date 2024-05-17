@@ -14,3 +14,4 @@ license = { text = "BSD 3-Clause License" }
 
 [project.entry-points."sourmash.cli_script"]
 plot2_command = "sourmash_plugin_betterplot:Command_Plot2"
+mds_command = "sourmash_plugin_betterplot:Command_MDS"

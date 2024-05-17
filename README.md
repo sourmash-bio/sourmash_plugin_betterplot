@@ -98,6 +98,22 @@ produces this plot:
 
 as well as this set of clusters @CTB.
 
+### Multidimensional Scaling (MDS) plot of 10-sketch comparison
+
+Use MDS to display a comparison.
+
+This command:
+```
+sourmash compare sketches/{2,47,48,49,51,52,53,59,60}.sig.zip \
+    -o 10sketches.cmp \
+    --labels-to 10sketches.cmp.labels_to.csv
+
+sourmash scripts mds 10sketches.cmp -o mds.10sketches.cmp.png
+```
+
+produces this plot:
+![10-sketches plotted using MDS](examples/mds.10sketches.cmp.png)
+
 ## Support
 
 We suggest filing issues in [the main sourmash issue tracker](https://github.com/dib-lab/sourmash/issues) as that receives more attention!
