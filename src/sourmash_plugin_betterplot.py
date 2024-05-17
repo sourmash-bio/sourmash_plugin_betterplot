@@ -142,7 +142,7 @@ def plot_composite_matrix(
     ax1.set_xticks([])
 
     if cut_point is not None:
-        ax1.axvline(x=cut_point, c='red')
+        ax1.axvline(x=cut_point, c='red', linestyle='dashed')
 
     xstart = 0.45
     width = 0.45
