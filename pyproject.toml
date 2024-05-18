@@ -1,13 +1,12 @@
-# CTB: search for XYZ and replace with plugin-specific information!
-
 [project]
 name = "sourmash_plugin_betterplot"
 description = "sourmash plugin for improved plotting/viz and cluster examination."
 readme = "README.md"
 requires-python = ">=3.10"
-version = "0.1"
+version = "0.2"
 
-dependencies = ["sourmash>=4.8.8,<5"]
+dependencies = ["sourmash>=4.8.8,<5",
+                "matplotlib", "numpy", "scipy", "scikit-learn"]
 
 [metadata]
 license = { text = "BSD 3-Clause License" }
