@@ -76,10 +76,10 @@ produces this plot:
 
 ![3-sketches example w/cut line](examples/plot2.cut.3sketches.cmp.png)
 
-### 10 sketches with a cut line + cluster extraction
+### Dendrogram of 10 sketches with a cut line + cluster extraction
 
 Compare 10 sketches, cluster, and use a cut point to extract
-multiple clusters.
+multiple clusters. Use `--dendrogram-only` to plot just the dendrogram.
 
 This command:
 ```
@@ -89,7 +89,7 @@ sourmash compare sketches/{2,47,48,49,51,52,53,59,60}.sig.zip \
 
 sourmash scripts plot2 10sketches.cmp 10sketches.cmp.labels_to.csv \
     -o plot2.cut.10sketches.cmp.png \
-    --cut-point=1.35 --cluster-out
+    --cut-point=1.35 --cluster-out --dendrogram-only
 ```
 
 produces this plot:

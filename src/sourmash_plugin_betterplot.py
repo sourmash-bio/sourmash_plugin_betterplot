@@ -135,6 +135,10 @@ class Command_Plot2(CommandLinePlugin):
             "--cluster-out", action='store_true',
             help="output clusters"
         )
+        subparser.add_argument(
+            "--dendrogram-only", "--no-matrix", action='store_true',
+            help="plot only the dendrogram"
+        )
 
     def main(self, args):
         # code that we actually run.
@@ -144,7 +148,7 @@ class Command_Plot2(CommandLinePlugin):
 
 def plot_composite_matrix(
     D, labelinfo, show_labels=True, vmax=1.0, vmin=0.0, force=False,
-        cut_point=None, figsize_x=11, figsize_y=8,
+        cut_point=None, figsize_x=11, figsize_y=8, dendrogram_only=False,
 ):
     """Build a composite plot showing dendrogram + distance matrix/heatmap.
 
@@ -198,32 +202,30 @@ def plot_composite_matrix(
 
     idx1 = Z1["leaves"]
 
-    # reorder D by the clustering in the dendrogram
-    D = D[idx1, :]
-    D = D[:, idx1]
+    if not dendrogram_only:
+        # reorder D by the clustering in the dendrogram
+        D = D[idx1, :]
+        D = D[:, idx1]
 
-    # show matrix
-    axmatrix = fig.add_axes([xstart, 0.1, width, 0.6])
+        # show matrix
+        axmatrix = fig.add_axes([xstart, 0.1, width, 0.6])
 
-    im = axmatrix.matshow(
-        D, aspect="auto", origin="lower", cmap=pylab.cm.YlGnBu, vmin=vmin, vmax=vmax
-    )
-    axmatrix.set_xticks([])
-    axmatrix.set_yticks([])
+        im = axmatrix.matshow(
+            D, aspect="auto", origin="lower", cmap=pylab.cm.YlGnBu,
+            vmin=vmin, vmax=vmax
+        )
+        axmatrix.set_xticks([])
+        axmatrix.set_yticks([])
 
-    # Plot colorbar.
-    axcolor = fig.add_axes([scale_xstart, 0.1, 0.02, 0.6])
-    pylab.colorbar(im, cax=axcolor)
+        # Plot colorbar.
+        axcolor = fig.add_axes([scale_xstart, 0.1, 0.02, 0.6])
+        pylab.colorbar(im, cax=axcolor)
 
     return fig, Y, D
 
 
 def plot2(args):
     "Produce a clustering matrix and plot."
-    import matplotlib as mpl
-
-    #mpl.use("Agg")
-
     # load files
     D_filename = args.distances
 
@@ -271,6 +273,7 @@ def plot2(args):
         cut_point=args.cut_point,
         figsize_x=args.figsize_x,
         figsize_y=args.figsize_y,
+        dendrogram_only=args.dendrogram_only,
     )
     fig.savefig(args.output_figure, bbox_inches='tight')
     notify(f"wrote numpy distance matrix to: {args.output_figure}")
