@@ -82,6 +82,42 @@ def load_categories_csv(filename, labelinfo):
     return category_map, colors
 
 
+def load_categories_csv_for_labels(filename, queries):
+    "Load a categories CSV that must use label name."
+    with sourmash_args.FileInputCSV(filename) as r:
+        categories = list(r)
+
+    category_map = {}
+    colors = None
+    if categories:
+        key = "label"
+
+        category_values = list(set([row["category"] for row in categories]))
+        cat_colors = list(map(plt.cm.tab10, range(len(category_values))))
+        category_map = {}
+        for v, color in zip(category_values, cat_colors):
+            category_map[v] = color
+
+        category_map2 = {}
+        for row in categories:
+            label = row[key]
+            cat = row["category"]
+            print('XXX', cat, label)
+            category_map2[label] = category_map[cat]
+
+        #from pprint import pprint
+        #pprint(category_map2)
+
+        colors = []
+        for label, idx in queries:
+            color = category_map2[label]
+            colors.append(color)
+    else:
+        notify(f"nothing in categories file '{filename}'?!")
+
+    return category_map, colors
+
+
 #
 # CLI plugin - supports 'sourmash scripts plot2'
 #
@@ -386,7 +422,7 @@ class Command_MDS(CommandLinePlugin):
 class Command_MDS2(CommandLinePlugin):
     command = "mds2"  # 'scripts <command>'
     description = "plot a 2-D multidimensional scaling plot from branchwater plugin's 'pairwise' output"  # output with -h
-    usage = "sourmash scripts mds2 <matrix> <labels_csv> -o <figure.png>"  # output with no args/bad args as well as -h
+    usage = "sourmash scripts mds2 <matrix> -o <figure.png>"  # output with no args/bad args as well as -h
     epilog = epilog  # output with -h
     formatter_class = argparse.RawTextHelpFormatter  # do not reformat multiline
 
@@ -419,6 +455,8 @@ class Command_MDS2(CommandLinePlugin):
 
         assert n <= len(queries)
 
+        mat = numpy.zeros((len(queries), len(queries)))
+
         pairs = []
         for row in rows:
             q = row['query_name']
@@ -427,19 +465,24 @@ class Command_MDS2(CommandLinePlugin):
             mi = sample_d[m]
             jaccard = float(row['jaccard'])
 
-            pairs.append((qi, mi, jaccard))
+            mat[qi, mi] = 1 - jaccard
+            mat[mi, qi] = 1 - jaccard
+
+        numpy.fill_diagonal(mat, 1)
 
         # Example usage
         # Assume object indices instead of names for simplicity
         # similarity_tuples = [(0, 1, 0.7), (0, 2, 0.4), (1, 2, 0.5)]
         # num_objects = 3  # You should know the total number of objects
-        mat = create_sparse_dissimilarity_matrix(pairs, len(queries))
+        #mat = create_sparse_dissimilarity_matrix(pairs, len(queries))
 
         # load categories?
         category_map = None
         colors = None
-#        if args.categories_csv:
-#            category_map, colors = load_categories_csv(args.categories_csv, labelinfo)
+        if args.categories_csv:
+            xx = sample_d.items()
+            xx = list(sorted(xx, key=lambda x: x[1]))
+            category_map, colors = load_categories_csv_for_labels(args.categories_csv, xx)
 
         plot_mds(mat, colors=colors, category_map=category_map)
 
