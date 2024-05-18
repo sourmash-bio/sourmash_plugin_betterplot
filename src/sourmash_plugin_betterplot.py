@@ -339,7 +339,9 @@ class Command_MDS(CommandLinePlugin):
             mat = numpy.load(f)
 
         labelinfo = load_labelinfo_csv(args.labels_from)
-        categories_map = None
+
+        # load categories?
+        category_map = None
         colors = None
         if args.categories_csv:
             category_map, colors = load_categories_csv(args.categories_csv,
@@ -384,9 +386,10 @@ def plot_mds_sparse(matrix, labelinfo, *, colors=None, category_map=None):
     plt.xlabel('Dimension 1')
     plt.ylabel('Dimension 2')
 
-    # create a custom legend of just the categories
-    legend_elements = []
-    for k, v in category_map.items():
-        legend_elements.append(Line2D([0], [0], color=v, label=k,
-                                      marker='o', lw=0))
-    plt.legend(handles=legend_elements)
+    if colors and category_map:
+        # create a custom legend of just the categories
+        legend_elements = []
+        for k, v in category_map.items():
+            legend_elements.append(Line2D([0], [0], color=v, label=k,
+                                          marker='o', lw=0))
+        plt.legend(handles=legend_elements)
