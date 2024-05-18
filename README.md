@@ -88,7 +88,7 @@ sourmash compare sketches/{2,47,48,49,51,52,53,59,60}.sig.zip \
     --labels-to 10sketches.cmp.labels_to.csv
 
 sourmash scripts plot2 10sketches.cmp 10sketches.cmp.labels_to.csv \
-    -o plot2.cut.10sketches.cmp.png \
+    -o plot2.cut.dendro.10sketches.cmp.png \
     --cut-point=1.35 --cluster-out --dendrogram-only
 ```
 
