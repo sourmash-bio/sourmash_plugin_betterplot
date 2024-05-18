@@ -1,9 +1,5 @@
 """betterplot plugin implementation"""
 
-usage = """
-   sourmash scripts plot2 <@CTB>
-"""
-
 epilog = """
 
 Need help? Have questions? Ask at http://github.com/sourmash-bio/sourmash/issues!
@@ -93,8 +89,8 @@ def load_categories_csv(filename, labelinfo):
 
 class Command_Plot2(CommandLinePlugin):
     command = "plot2"  # 'scripts <command>'
-    description = "@CTB"  # output with -h
-    usage = "@CTB"  # output with no args/bad args as well as -h
+    description = "plot a distance matrix produced by 'sourmash compare'"  # output with -h
+    usage = "sourmash scripts plot <matrix> <labels_csv> -o <output.png>"  # output with no args/bad args as well as -h
     epilog = epilog  # output with -h
     formatter_class = argparse.RawTextHelpFormatter  # do not reformat multiline
 
@@ -342,8 +338,8 @@ def plot2(args):
 
 class Command_MDS(CommandLinePlugin):
     command = "mds"  # 'scripts <command>'
-    description = "@CTB"  # output with -h
-    usage = "@CTB"  # output with no args/bad args as well as -h
+    description = "plot a 2-D multidimensional scaling plot from 'sourmash compare' output"  # output with -h
+    usage = "sourmash scripts mds <matrix> <labels_csv> -o <figure.png>"  # output with no args/bad args as well as -h
     epilog = epilog  # output with -h
     formatter_class = argparse.RawTextHelpFormatter  # do not reformat multiline
 
