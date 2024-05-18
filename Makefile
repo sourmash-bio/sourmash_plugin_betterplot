@@ -1,3 +1,5 @@
+.PHONY: dist examples
+
 all: test
 
 test: 
@@ -8,3 +10,12 @@ install-dev:
 
 install:
 	python -m pip install .
+
+examples:
+	cd examples && make
+
+cleanrun:
+	cd examples && make cleanall
+
+dist:
+	python -m build

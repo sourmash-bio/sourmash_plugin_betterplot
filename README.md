@@ -76,10 +76,10 @@ produces this plot:
 
 ![3-sketches example w/cut line](examples/plot2.cut.3sketches.cmp.png)
 
-### 10 sketches with a cut line + cluster extraction
+### Dendrogram of 10 sketches with a cut line + cluster extraction
 
 Compare 10 sketches, cluster, and use a cut point to extract
-multiple clusters.
+multiple clusters. Use `--dendrogram-only` to plot just the dendrogram.
 
 This command:
 ```
@@ -88,15 +88,33 @@ sourmash compare sketches/{2,47,48,49,51,52,53,59,60}.sig.zip \
     --labels-to 10sketches.cmp.labels_to.csv
 
 sourmash scripts plot2 10sketches.cmp 10sketches.cmp.labels_to.csv \
-    -o plot2.cut.10sketches.cmp.png \
-    --cut-point=1.35 --cluster-out
+    -o plot2.cut.dendro.10sketches.cmp.png \
+    --cut-point=1.35 --cluster-out --dendrogram-only
 ```
 
 produces this plot:
 
-![10-sketches example w/cut line](examples/plot2.cut.10sketches.cmp.png)
+![10-sketches example w/cut line](examples/plot2.cut.dendro.10sketches.cmp.png)
 
 as well as this set of clusters @CTB.
+
+### Multidimensional Scaling (MDS) plot of 10-sketch comparison
+
+Use MDS to display a comparison.
+
+This command:
+```
+sourmash compare sketches/{2,47,48,49,51,52,53,59,60}.sig.zip \
+    -o 10sketches.cmp \
+    --labels-to 10sketches.cmp.labels_to.csv
+
+sourmash scripts mds 10sketches.cmp 10sketches.cmp.labels_to.csv \
+    -o mds.10sketches.cmp.png \
+    -C 10sketches-categories.csv
+```
+
+produces this plot:
+![10-sketches plotted using MDS](examples/mds.10sketches.cmp.png)
 
 ## Support
 

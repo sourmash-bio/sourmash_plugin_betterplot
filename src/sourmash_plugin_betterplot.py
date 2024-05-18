@@ -17,6 +17,10 @@ import os
 import numpy
 import pylab
 import scipy.cluster.hierarchy as sch
+from sklearn.manifold import MDS
+import matplotlib.pyplot as plt
+from scipy.sparse import lil_matrix, csr_matrix
+from matplotlib.lines import Line2D
 
 from collections import defaultdict
 
@@ -25,6 +29,61 @@ from sourmash.plugins import CommandLinePlugin
 
 
 ###
+
+
+def load_labelinfo_csv(filename):
+    with sourmash_args.FileInputCSV(filename) as r:
+        labelinfo = list(r)
+
+    labelinfo.sort(key=lambda row: int(row['sort_order']))
+    return labelinfo
+
+
+def load_categories_csv(filename, labelinfo):
+    with sourmash_args.FileInputCSV(filename) as r:
+        categories = list(r)
+
+    category_map = {}
+    colors = None
+    if categories:
+        assert labelinfo
+        keys = set(categories[0].keys())
+        keys -= { "category" }
+
+        key = None
+        for k in keys:
+            if k in labelinfo[0].keys():
+                notify(f"found category key: {k}")
+                key = k
+                break
+
+        if key:
+            category_values = list(set([ row["category"] for row in categories ]))
+            cat_colors = list(map(plt.cm.tab10, range(len(category_values))))
+            category_map = {}
+            for v, color in zip(category_values, cat_colors):
+                category_map[v] = color
+
+            category_map2 = {}
+            for row in categories:
+                category_map2[row[key]] = category_map[row['category']]
+
+#            from pprint import pprint
+#            pprint(category_map2)
+
+            colors = []
+            for row in labelinfo:
+                value = row[key]
+                color = category_map2[value]
+                colors.append(color)
+
+        else:
+            notify(f"no valid key column found in categories file '{filename}'.")
+    else:
+        notify(f"nothing in categories file '{filename}'?!")
+        
+    return category_map, colors
+
 
 #
 # CLI plugin - supports 'sourmash scripts plot2'
@@ -86,16 +145,20 @@ class Command_Plot2(CommandLinePlugin):
             "--cluster-out", action='store_true',
             help="output clusters"
         )
+        subparser.add_argument(
+            "--dendrogram-only", "--no-matrix", action='store_true',
+            help="plot only the dendrogram"
+        )
 
     def main(self, args):
         # code that we actually run.
         super().main(args)
-        plot(args)
+        plot2(args)
 
 
 def plot_composite_matrix(
     D, labelinfo, show_labels=True, vmax=1.0, vmin=0.0, force=False,
-        cut_point=None, figsize_x=11, figsize_y=8,
+        cut_point=None, figsize_x=11, figsize_y=8, dendrogram_only=False,
 ):
     """Build a composite plot showing dendrogram + distance matrix/heatmap.
 
@@ -149,32 +212,30 @@ def plot_composite_matrix(
 
     idx1 = Z1["leaves"]
 
-    # reorder D by the clustering in the dendrogram
-    D = D[idx1, :]
-    D = D[:, idx1]
+    if not dendrogram_only:
+        # reorder D by the clustering in the dendrogram
+        D = D[idx1, :]
+        D = D[:, idx1]
 
-    # show matrix
-    axmatrix = fig.add_axes([xstart, 0.1, width, 0.6])
+        # show matrix
+        axmatrix = fig.add_axes([xstart, 0.1, width, 0.6])
 
-    im = axmatrix.matshow(
-        D, aspect="auto", origin="lower", cmap=pylab.cm.YlGnBu, vmin=vmin, vmax=vmax
-    )
-    axmatrix.set_xticks([])
-    axmatrix.set_yticks([])
+        im = axmatrix.matshow(
+            D, aspect="auto", origin="lower", cmap=pylab.cm.YlGnBu,
+            vmin=vmin, vmax=vmax
+        )
+        axmatrix.set_xticks([])
+        axmatrix.set_yticks([])
 
-    # Plot colorbar.
-    axcolor = fig.add_axes([scale_xstart, 0.1, 0.02, 0.6])
-    pylab.colorbar(im, cax=axcolor)
+        # Plot colorbar.
+        axcolor = fig.add_axes([scale_xstart, 0.1, 0.02, 0.6])
+        pylab.colorbar(im, cax=axcolor)
 
     return fig, Y, D
 
 
-def plot(args):
+def plot2(args):
     "Produce a clustering matrix and plot."
-    import matplotlib as mpl
-
-    #mpl.use("Agg")
-
     # load files
     D_filename = args.distances
 
@@ -187,10 +248,7 @@ def plot(args):
     labelfilename = args.labels_from
     notify(f"loading labels from CSV file '{labelfilename}'")
 
-    labelinfo = []
-    with sourmash_args.FileInputCSV(labelfilename) as r:
-        labelinfo = list(r)
-        labelinfo.sort(key=lambda row: int(row['sort_order']))
+    labelinfo = load_labelinfo_csv(labelfilename)
 
     if len(labelinfo) != D.shape[0]:
         error("{} labels != matrix size, exiting", len(labeltext))
@@ -225,6 +283,7 @@ def plot(args):
         cut_point=args.cut_point,
         figsize_x=args.figsize_x,
         figsize_y=args.figsize_y,
+        dendrogram_only=args.dendrogram_only,
     )
     fig.savefig(args.output_figure, bbox_inches='tight')
     notify(f"wrote numpy distance matrix to: {args.output_figure}")
@@ -252,3 +311,85 @@ def plot(args):
             with open(f"cluster.{k}.list", "w") as fp:
                 for row in v:
                     fp.write(f"{row['signature_file']}\n")
+
+
+class Command_MDS(CommandLinePlugin):
+    command = 'mds'             # 'scripts <command>'
+    description = "@CTB"       # output with -h
+    usage = "@CTB"               # output with no args/bad args as well as -h
+    epilog = epilog             # output with -h
+    formatter_class = argparse.RawTextHelpFormatter # do not reformat multiline
+
+    def __init__(self, subparser):
+        super().__init__(subparser)
+
+        subparser.add_argument('comparison_matrix',
+                               help="output from 'sourmash compare'")
+        subparser.add_argument('labels_from',
+                               help="output from 'sourmash compare --labels-to'")
+        subparser.add_argument('-C', '--categories-csv',
+                               help="CSV mapping label columns to categories")
+        subparser.add_argument('-o', '--output-figure', required=True)
+
+    def main(self, args):
+        # code that we actually run.
+        super().main(args)
+
+        with open(args.comparison_matrix, 'rb') as f:
+            mat = numpy.load(f)
+
+        labelinfo = load_labelinfo_csv(args.labels_from)
+
+        # load categories?
+        category_map = None
+        colors = None
+        if args.categories_csv:
+            category_map, colors = load_categories_csv(args.categories_csv,
+                                                       labelinfo)
+
+        # Example usage
+        # Assume object indices instead of names for simplicity
+        #similarity_tuples = [(0, 1, 0.7), (0, 2, 0.4), (1, 2, 0.5)]
+        #num_objects = 3  # You should know the total number of objects
+        #sparse_matrix = create_sparse_similarity_matrix(similarity_tuples, num_objects)
+        plot_mds_sparse(mat, labelinfo, colors=colors,
+                        category_map=category_map)
+
+        plt.savefig(args.output_figure)
+
+
+# @CTB unused for now
+def create_sparse_similarity_matrix(tuples, num_objects):
+    # Initialize matrix in LIL format for efficient setup
+    similarity_matrix = lil_matrix((num_objects, num_objects))
+
+    for obj1, obj2, similarity in tuples:
+        similarity_matrix[obj1, obj2] = similarity
+        if obj1 != obj2:
+            similarity_matrix[obj2, obj1] = similarity
+
+    # Ensure diagonal elements are 1
+    similarity_matrix.setdiag(1)
+
+    # Convert to CSR format for efficient operations later
+    return similarity_matrix.tocsr()
+
+
+def plot_mds_sparse(matrix, labelinfo, *, colors=None, category_map=None):
+    # Convert sparse similarity to dense dissimilarity matrix
+    #dissimilarities = 1 - matrix.toarray()
+    dissimilarities = 1 - matrix
+
+    mds = MDS(n_components=2, dissimilarity='precomputed', random_state=42)
+    mds_coords = mds.fit_transform(dissimilarities)
+    plt.scatter(mds_coords[:, 0], mds_coords[:, 1], color=colors)
+    plt.xlabel('Dimension 1')
+    plt.ylabel('Dimension 2')
+
+    if colors and category_map:
+        # create a custom legend of just the categories
+        legend_elements = []
+        for k, v in category_map.items():
+            legend_elements.append(Line2D([0], [0], color=v, label=k,
+                                          marker='o', lw=0))
+        plt.legend(handles=legend_elements)

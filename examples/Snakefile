@@ -6,6 +6,8 @@ rule all:
         "plot2.3sketches.cmp.png",
         "plot2.cut.3sketches.cmp.png",
         "plot2.cut.10sketches.cmp.png",
+        "plot2.cut.dendro.10sketches.cmp.png",
+        "mds.10sketches.cmp.png",
 
 rule cmp_3sketches:
     input:
@@ -63,4 +65,28 @@ rule plot2_10sketches_cut:
     shell: """
         sourmash scripts plot2 {input.cmp} {input.labels} -o {output} \
             --cut-point=1.35 --cluster-out --figsize-x=5 --figsize-y=3
+    """
+
+rule plot2_10sketches_cut_dendro_only:
+    input:
+        cmp="10sketches.cmp",
+        labels="10sketches.cmp.labels_to.csv",
+    output:
+        "plot2.cut.dendro.10sketches.cmp.png",
+    shell: """
+        sourmash scripts plot2 {input.cmp} {input.labels} -o {output} \
+            --cut-point=1.35 --cluster-out --figsize-x=5 --figsize-y=3 \
+            --dendrogram-only
+    """
+
+rule mds_10sketches:
+    input:
+        cmp="10sketches.cmp",
+        labels="10sketches.cmp.labels_to.csv",
+        categories="10sketches-categories.csv",
+    output:
+        "mds.10sketches.cmp.png"
+    shell: """
+        sourmash scripts mds {input.cmp} {input.labels} -o {output} \
+           -C {input.categories}
     """
