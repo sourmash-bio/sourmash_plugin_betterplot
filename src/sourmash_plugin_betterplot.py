@@ -20,6 +20,7 @@ import scipy.cluster.hierarchy as sch
 from sklearn.manifold import MDS
 import matplotlib.pyplot as plt
 from scipy.sparse import lil_matrix, csr_matrix
+from matplotlib.lines import Line2D
 
 from collections import defaultdict
 
@@ -43,6 +44,7 @@ def load_categories_csv(filename, labelinfo):
         categories = list(r)
 
     category_map = {}
+    colors = None
     if categories:
         assert labelinfo
         keys = set(categories[0].keys())
@@ -66,11 +68,19 @@ def load_categories_csv(filename, labelinfo):
             for row in categories:
                 category_map2[row[key]] = category_map[row['category']]
 
+#            from pprint import pprint
+#            pprint(category_map2)
+
             colors = []
             for row in labelinfo:
                 value = row[key]
                 color = category_map2[value]
                 colors.append(color)
+
+        else:
+            notify(f"no valid key column found in categories file '{filename}'.")
+    else:
+        notify(f"nothing in categories file '{filename}'?!")
         
     return category_map, colors
 
@@ -332,19 +342,21 @@ class Command_MDS(CommandLinePlugin):
         categories_map = None
         colors = None
         if args.categories_csv:
-            categories_map, colors = load_categories_csv(args.categories_csv,
-                                                         labelinfo)
+            category_map, colors = load_categories_csv(args.categories_csv,
+                                                       labelinfo)
 
         # Example usage
         # Assume object indices instead of names for simplicity
         #similarity_tuples = [(0, 1, 0.7), (0, 2, 0.4), (1, 2, 0.5)]
         #num_objects = 3  # You should know the total number of objects
         #sparse_matrix = create_sparse_similarity_matrix(similarity_tuples, num_objects)
-        plot_mds_sparse(mat, labelinfo, colors=colors)
+        plot_mds_sparse(mat, labelinfo, colors=colors,
+                        category_map=category_map)
 
         plt.savefig(args.output_figure)
 
 
+# @CTB unused for now
 def create_sparse_similarity_matrix(tuples, num_objects):
     # Initialize matrix in LIL format for efficient setup
     similarity_matrix = lil_matrix((num_objects, num_objects))
@@ -361,7 +373,7 @@ def create_sparse_similarity_matrix(tuples, num_objects):
     return similarity_matrix.tocsr()
 
 
-def plot_mds_sparse(matrix, labelinfo, *, colors=None):
+def plot_mds_sparse(matrix, labelinfo, *, colors=None, category_map=None):
     # Convert sparse similarity to dense dissimilarity matrix
     #dissimilarities = 1 - matrix.toarray()
     dissimilarities = 1 - matrix
@@ -369,6 +381,12 @@ def plot_mds_sparse(matrix, labelinfo, *, colors=None):
     mds = MDS(n_components=2, dissimilarity='precomputed', random_state=42)
     mds_coords = mds.fit_transform(dissimilarities)
     plt.scatter(mds_coords[:, 0], mds_coords[:, 1], color=colors)
-    plt.title('MDS Plot')
     plt.xlabel('Dimension 1')
     plt.ylabel('Dimension 2')
+
+    # create a custom legend of just the categories
+    legend_elements = []
+    for k, v in category_map.items():
+        legend_elements.append(Line2D([0], [0], color=v, label=k,
+                                      marker='o', lw=0))
+    plt.legend(handles=legend_elements)

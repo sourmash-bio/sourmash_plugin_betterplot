@@ -108,7 +108,9 @@ sourmash compare sketches/{2,47,48,49,51,52,53,59,60}.sig.zip \
     -o 10sketches.cmp \
     --labels-to 10sketches.cmp.labels_to.csv
 
-sourmash scripts mds 10sketches.cmp -o mds.10sketches.cmp.png
+sourmash scripts mds 10sketches.cmp 10sketches.cmp.labels_to.csv \
+    -o mds.10sketches.cmp.png \
+    -C 10sketches-categories.csv
 ```
 
 produces this plot:
