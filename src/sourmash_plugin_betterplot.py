@@ -377,35 +377,95 @@ class Command_MDS(CommandLinePlugin):
         # similarity_tuples = [(0, 1, 0.7), (0, 2, 0.4), (1, 2, 0.5)]
         # num_objects = 3  # You should know the total number of objects
         # sparse_matrix = create_sparse_similarity_matrix(similarity_tuples, num_objects)
-        plot_mds_sparse(mat, labelinfo, colors=colors, category_map=category_map)
+        dissim = 1 - mat
+        plot_mds(dissim, colors=colors, category_map=category_map)
 
         plt.savefig(args.output_figure)
 
 
-# @CTB unused for now
-def create_sparse_similarity_matrix(tuples, num_objects):
+class Command_MDS2(CommandLinePlugin):
+    command = "mds2"  # 'scripts <command>'
+    description = "plot a 2-D multidimensional scaling plot from branchwater plugin's 'pairwise' output"  # output with -h
+    usage = "sourmash scripts mds2 <matrix> <labels_csv> -o <figure.png>"  # output with no args/bad args as well as -h
+    epilog = epilog  # output with -h
+    formatter_class = argparse.RawTextHelpFormatter  # do not reformat multiline
+
+    def __init__(self, subparser):
+        super().__init__(subparser)
+
+        subparser.add_argument(
+            "comparison_csv", help="output from 'sourmash scripts pairwise'"
+        )
+        subparser.add_argument(
+            "-C", "--categories-csv", help="CSV mapping label columns to categories"
+        )
+        subparser.add_argument("-o", "--output-figure", required=True)
+
+    def main(self, args):
+        # code that we actually run.
+        super().main(args)
+
+        with sourmash_args.FileInputCSV(args.comparison_csv) as r:
+            rows = list(r)
+
+        print(f"loaded {len(rows)} rows from '{args.comparison_csv}'")
+        queries = set( [ row['query_name'] for row in rows ] )
+        queries.update(set( [ row['match_name'] for row in rows ] ))
+        print(f"loaded {len(queries)} total elements")
+
+        sample_d = {}
+        for n, sample_name in enumerate(queries):
+            sample_d[sample_name] = n
+
+        assert n <= len(queries)
+
+        pairs = []
+        for row in rows:
+            q = row['query_name']
+            qi = sample_d[q]
+            m = row['match_name']
+            mi = sample_d[m]
+            jaccard = float(row['jaccard'])
+
+            pairs.append((qi, mi, jaccard))
+
+        # Example usage
+        # Assume object indices instead of names for simplicity
+        # similarity_tuples = [(0, 1, 0.7), (0, 2, 0.4), (1, 2, 0.5)]
+        # num_objects = 3  # You should know the total number of objects
+        mat = create_sparse_dissimilarity_matrix(pairs, len(queries))
+
+        # load categories?
+        category_map = None
+        colors = None
+#        if args.categories_csv:
+#            category_map, colors = load_categories_csv(args.categories_csv, labelinfo)
+
+        plot_mds(mat, colors=colors, category_map=category_map)
+
+        plt.savefig(args.output_figure)
+
+
+def create_sparse_dissimilarity_matrix(tuples, num_objects):
     # Initialize matrix in LIL format for efficient setup
     similarity_matrix = lil_matrix((num_objects, num_objects))
 
     for obj1, obj2, similarity in tuples:
-        similarity_matrix[obj1, obj2] = similarity
+        similarity_matrix[obj1, obj2] = 1 - similarity
         if obj1 != obj2:
-            similarity_matrix[obj2, obj1] = similarity
+            similarity_matrix[obj2, obj1] = 1 - similarity
 
     # Ensure diagonal elements are 1
     similarity_matrix.setdiag(1)
 
-    # Convert to CSR format for efficient operations later
-    return similarity_matrix.tocsr()
+    # Convert to array format
+    # @CTB use tocsr or tocoo instead??
+    return similarity_matrix.toarray()
 
 
-def plot_mds_sparse(matrix, labelinfo, *, colors=None, category_map=None):
-    # Convert sparse similarity to dense dissimilarity matrix
-    # dissimilarities = 1 - matrix.toarray()
-    dissimilarities = 1 - matrix
-
+def plot_mds(matrix, *, colors=None, category_map=None):
     mds = MDS(n_components=2, dissimilarity="precomputed", random_state=42)
-    mds_coords = mds.fit_transform(dissimilarities)
+    mds_coords = mds.fit_transform(matrix)
     plt.scatter(mds_coords[:, 0], mds_coords[:, 1], color=colors)
     plt.xlabel("Dimension 1")
     plt.ylabel("Dimension 2")
