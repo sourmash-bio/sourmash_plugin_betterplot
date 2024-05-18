@@ -122,6 +122,25 @@ sourmash scripts mds 10sketches.cmp 10sketches.cmp.labels_to.csv \
 produces this plot:
 ![10-sketches plotted using MDS](examples/mds.10sketches.cmp.png)
 
+### Multidimensional Scaling (MDS) plot of 10-sketch comparisons using 'pairwise' output
+
+Use MDS to display a sparse comparison created using the branchwater
+plugin's `pairwise` command.
+
+These commands:
+```
+sourmash sig cat sketches/{2,47,48,49,51,52,53,59,60}.sig.zip \
+    -o 10sketches.sig.zip
+sourmash scripts pairwise 10sketches.sig.zip -o 10sketches.pairwise.csv
+
+sourmash scripts mds 10sketches.cmp \
+    -o mds.10sketches.cmp.png \
+    -C 10sketches-categories.csv
+```
+
+produces this plot:
+![10-sketches plotted using MDS2](examples/mds2.10sketches.cmp.png)
+
 ## Support
 
 We suggest filing issues in [the main sourmash issue tracker](https://github.com/dib-lab/sourmash/issues) as that receives more attention!
