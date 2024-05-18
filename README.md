@@ -94,7 +94,7 @@ sourmash scripts plot2 10sketches.cmp 10sketches.cmp.labels_to.csv \
 
 produces this plot:
 
-![10-sketches example w/cut line](examples/plot2.cut.10sketches.cmp.png)
+![10-sketches example w/cut line](examples/plot2.cut.dendro.10sketches.cmp.png)
 
 as well as this set of clusters @CTB.
 
