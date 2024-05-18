@@ -96,7 +96,7 @@ produces this plot:
 
 ![10-sketches example w/cut line](examples/plot2.cut.dendro.10sketches.cmp.png)
 
-as well as this set of clusters @CTB.
+as well as a set of 6 clusters to `10sketches.cmp.*.csv`.
 
 ### Multidimensional Scaling (MDS) plot of 10-sketch comparison
 
