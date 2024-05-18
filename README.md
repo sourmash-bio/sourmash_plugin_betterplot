@@ -1,6 +1,12 @@
 # sourmash_plugin_betterplot
 
-## What is this?
+[sourmash](https://sourmash.readthedocs.io/) is a tool for biological
+sequence analysis and comparisons.
+
+`betterplot` is a sourmash plugin that provides improved plotting/viz
+and cluster examination for sourmash-based sketch comparisons.
+
+## Why are we using the 
 
 [`sourmash compare`](https://sourmash.readthedocs.io/en/latest/command-line.html#sourmash-compare-compare-many-signatures)
 and
@@ -9,12 +15,12 @@ produce basic distance matrix plots that are useful for comparing and
 visualizing the relationships between dozens to hundreds of
 genomes. And this is one of the most popular use cases for sourmash!
 
-But! The visualization could be improved a lot beyond the basic viz
+But! The visualization can be improved a lot beyond the basic viz
 that `sourmash plot` produces, and there are a lot of only slightly
 more complicated use cases for comparing, clustering, and visualizing
 many genomes!
 
-This plugin will explore these use cases!
+This plugin will explore some of these use cases!
 
 Specific goals:
 
@@ -34,7 +40,7 @@ pip install sourmash_plugin_betterplot
 
 ## Usage
 
-@CTB: info goes here!
+See the examples below.
 
 ## Examples
 
@@ -122,14 +128,20 @@ We suggest filing issues in [the main sourmash issue tracker](https://github.com
 
 ## Dev docs
 
-`betterplot` is developed at https://github.com/sourmash-bio/sourmash_plugin_betterplot.
+`betterplot` is developed at
+https://github.com/sourmash-bio/sourmash_plugin_betterplot.
+
+See `environment.yml` for the dependencies needed to develop `betterplot`.
 
 ### Testing
 
 Run:
 ```
-pytest tests
+make examples
 ```
+to run the examples.
+
+For now, the examples serve as the tests; eventually we will add unit tests.
 
 ### Generating a release
 
