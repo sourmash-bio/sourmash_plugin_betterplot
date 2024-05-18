@@ -13,16 +13,17 @@ import argparse
 import sourmash
 from sourmash import sourmash_args
 import os
+import csv
+from collections import defaultdict
+
 
 import numpy
 import pylab
+import matplotlib.pyplot as plt
 import scipy.cluster.hierarchy as sch
 from sklearn.manifold import MDS
-import matplotlib.pyplot as plt
 from scipy.sparse import lil_matrix, csr_matrix
 from matplotlib.lines import Line2D
-
-from collections import defaultdict
 
 from sourmash.logging import debug_literal, error, notify, print_results
 from sourmash.plugins import CommandLinePlugin
@@ -98,7 +99,6 @@ class Command_Plot2(CommandLinePlugin):
 
     def __init__(self, subparser):
         super().__init__(subparser)
-        # add argparse arguments here.
         subparser.add_argument("distances",
                                help='output from "sourmash compare"')
         subparser.add_argument("labels_from",
@@ -144,6 +144,10 @@ class Command_Plot2(CommandLinePlugin):
         subparser.add_argument(
             "--cluster-out", action='store_true',
             help="output clusters"
+        )
+        subparser.add_argument(
+            "--cluster-prefix", default=None,
+            help="prefix to prepend to cluster names; default is cmp file"
         )
         subparser.add_argument(
             "--dendrogram-only", "--no-matrix", action='store_true',
@@ -294,23 +298,33 @@ def plot2(args):
     # output reordered labels with their clusters?
     if args.cut_point is not None and args.cluster_out:
         cut_point = float(args.cut_point)
-        # @CTB 'distance'...
+        prefix = args.cluster_prefix or os.path.basename(D_filename)
+        notify(f"outputting clusters with prefix '{prefix}'")
+
+        # generate clusters using 'fcluster'
+        # @CTB 'distance'...? does this conflict with 'linkage'?
         assignments = sch.fcluster(linkage_Z, cut_point, 'distance')
 
-        print(assignments)
+        #print(assignments)
 
+        # reorganize labelinfo by cluster
         cluster_d = defaultdict(list)
         for cluster_n, label_row in zip(assignments, labelinfo):
             cluster_d[cluster_n].append(label_row)
 
+        # output labelinfo rows.
+        notify(f"writing {len(cluster_d)} clusters.")
         for k, v in cluster_d.items():
-            print(f"cluster {k}")
-            for row in v:
-                print(f"\t{row['label']}")
+            #print(f"cluster {k}")
+            #for row in v:
+            #    print(f"\t{row['label']}")
 
-            with open(f"cluster.{k}.list", "w") as fp:
+            filename = f"{prefix}.{k}.csv"
+            with sourmash_args.FileOutputCSV(filename) as fp:
+                w = csv.DictWriter(fp, fieldnames=labelinfo[0].keys())
+                w.writeheader()
                 for row in v:
-                    fp.write(f"{row['signature_file']}\n")
+                    w.writerow(row)
 
 
 class Command_MDS(CommandLinePlugin):
