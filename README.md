@@ -6,7 +6,7 @@ sequence analysis and comparisons.
 `betterplot` is a sourmash plugin that provides improved plotting/viz
 and cluster examination for sourmash-based sketch comparisons.
 
-## Why are we using the 
+## Why does this plugin exist?
 
 [`sourmash compare`](https://sourmash.readthedocs.io/en/latest/command-line.html#sourmash-compare-compare-many-signatures)
 and
@@ -122,10 +122,14 @@ sourmash scripts mds 10sketches.cmp 10sketches.cmp.labels_to.csv \
 produces this plot:
 ![10-sketches plotted using MDS](examples/mds.10sketches.cmp.png)
 
-### Multidimensional Scaling (MDS) plot of 10-sketch comparisons using 'pairwise' output
+### Multidimensional Scaling (MDS) plot of 10-sketch comparisons from 'pairwise' output
 
-Use MDS to display a sparse comparison created using the branchwater
-plugin's `pairwise` command.
+Use MDS to display a sparse comparison created using the
+[branchwater plugin's](https://github.com/sourmash-bio/sourmash_plugin_branchwater)
+`pairwise` command. The output of `pairwise` is distinct from the
+`sourmash compare` output: `pairwise` produces a sparse CSV file that
+contains just the matches above threshold, while `sourmash compare`
+produces a dense numpy matrix.
 
 These commands:
 ```
