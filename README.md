@@ -6,7 +6,7 @@ sequence analysis and comparisons.
 `betterplot` is a sourmash plugin that provides improved plotting/viz
 and cluster examination for sourmash-based sketch comparisons.
 
-## Why are we using the 
+## Why does this plugin exist?
 
 [`sourmash compare`](https://sourmash.readthedocs.io/en/latest/command-line.html#sourmash-compare-compare-many-signatures)
 and
@@ -15,12 +15,12 @@ produce basic distance matrix plots that are useful for comparing and
 visualizing the relationships between dozens to hundreds of
 genomes. And this is one of the most popular use cases for sourmash!
 
-But! The visualization can be improved a lot beyond the basic viz
-that `sourmash plot` produces, and there are a lot of only slightly
-more complicated use cases for comparing, clustering, and visualizing
-many genomes!
+However, the visualization can be improved a lot beyond the basic viz
+that `sourmash plot` produces. There are a lot of only slightly more
+complicated use cases for comparing, clustering, and visualizing many
+genomes!
 
-This plugin will explore some of these use cases!
+And this plugin exists to explore some of these use cases!
 
 Specific goals:
 
@@ -121,6 +121,54 @@ sourmash scripts mds 10sketches.cmp 10sketches.cmp.labels_to.csv \
 
 produces this plot:
 ![10-sketches plotted using MDS](examples/mds.10sketches.cmp.png)
+
+### Multidimensional Scaling (MDS) plot of 10-sketch comparisons from `pairwise` output
+
+Use MDS to display a sparse comparison created using the
+[branchwater plugin's](https://github.com/sourmash-bio/sourmash_plugin_branchwater)
+`pairwise` command. The output of `pairwise` is distinct from the
+`sourmash compare` output: `pairwise` produces a sparse CSV file that
+contains just the matches above threshold, while `sourmash compare`
+produces a dense numpy matrix.
+
+These commands:
+```
+sourmash sig cat sketches/{2,47,48,49,51,52,53,59,60}.sig.zip \
+    -o 10sketches.sig.zip
+sourmash scripts pairwise 10sketches.sig.zip -o 10sketches.pairwise.csv
+
+sourmash scripts mds 10sketches.cmp \
+    -o mds.10sketches.cmp.png \
+    -C 10sketches-categories.csv
+```
+
+produces this plot:
+![10-sketches plotted using MDS2](examples/mds2.10sketches.cmp.png)
+
+### Convert `pairwise` output to `sourmash compare` output and plot
+
+These commands:
+```
+# build pairwise
+sourmash sig cat sketches/{2,47,48,49,51,52,53,59,60}.sig.zip \
+    -o 10sketches.sig.zip
+sourmash scripts pairwise 10sketches.sig.zip -o 10sketches.pairwise.csv
+
+# convert pairwise
+sourmash scripts pairwise_to_compare 10sketches.pairwise.csv \
+    -o 10sketches.pairwise.cmp --write-all \
+    --labels-to 10sketches.pairwise.cmp.labels_to.csv
+    
+# plot!
+sourmash scripts plot2 10sketches.pairwise.cmp \
+    10sketches.pairwise.cmp.labels_to.csv \
+    -o plot2.pairwise.10sketches.cmp.png
+```
+
+produce this plot:
+
+![10-sketches plotted from pairwise](examples/plot2.pairwise.10sketches.cmp.png)
+
 
 ## Support
 

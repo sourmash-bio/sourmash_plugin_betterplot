@@ -8,6 +8,8 @@ rule all:
         "plot2.cut.10sketches.cmp.png",
         "plot2.cut.dendro.10sketches.cmp.png",
         "mds.10sketches.cmp.png",
+        "mds2.10sketches.cmp.png",
+        "plot2.pairwise.10sketches.cmp.png",
 
 rule cmp_3sketches:
     input:
@@ -89,4 +91,57 @@ rule mds_10sketches:
     shell: """
         sourmash scripts mds {input.cmp} {input.labels} -o {output} \
            -C {input.categories}
+    """
+
+rule combine_10sketches:
+    input:
+        expand("sketches/{n}.sig.zip", n=sketches_10)
+    output:
+        "10sketches.sig.zip"
+    shell: """
+        sourmash sig cat {input} -o {output}
+    """
+
+rule r10sketches_pairwise:
+    input:
+        "10sketches.sig.zip",
+    output:
+        cmp="10sketches.pairwise.csv",
+    shell: """
+        sourmash scripts pairwise {input} -o {output} --write-all
+    """
+
+rule mds2_10sketches:
+    input:
+        cmp="10sketches.pairwise.csv",
+        categories="10sketches-categories.csv",
+    output:
+        "mds2.10sketches.cmp.png"
+    shell: """
+        sourmash scripts mds2 {input.cmp} -o {output} \
+           -C {input.categories}
+    """
+
+rule convert_10sketches_pairwise_to_cmp:
+    input:
+        cmp="10sketches.pairwise.csv",
+    output:
+        cmp="10sketches.pairwise.cmp",
+        labels_txt="10sketches.pairwise.cmp.labels.txt",
+        labels_csv="10sketches.pairwise.cmp.labels_to.csv",
+    shell: """
+        sourmash scripts pairwise_to_compare {input.cmp} -o {output.cmp} \
+            --labels-to {output.labels_csv}
+    """
+        
+
+rule plot2_10sketches_pairwise:
+    input:
+        cmp="10sketches.pairwise.cmp",
+        labels_csv="10sketches.pairwise.cmp.labels_to.csv",
+    output:
+        "plot2.pairwise.10sketches.cmp.png",
+    shell: """
+        sourmash scripts plot2 {input.cmp} {input.labels_csv} -o {output} \
+            --figsize-x=5 --figsize-y=3
     """

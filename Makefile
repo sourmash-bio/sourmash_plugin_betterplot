@@ -1,6 +1,6 @@
 .PHONY: dist examples
 
-all: test
+all: examples
 
 test: 
 	python -m pytest

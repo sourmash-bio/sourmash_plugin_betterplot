@@ -7,3 +7,4 @@ src/sourmash_plugin_betterplot.egg-info/
 *.labels.txt
 *.csv
 *~
+examples/10sketches.sig.zip

@@ -56,6 +56,8 @@ def load_categories_csv(filename, labelinfo):
 
         if key:
             category_values = list(set([row["category"] for row in categories]))
+            category_values.sort()
+
             cat_colors = list(map(plt.cm.tab10, range(len(category_values))))
             category_map = {}
             for v, color in zip(category_values, cat_colors):
@@ -65,9 +67,6 @@ def load_categories_csv(filename, labelinfo):
             for row in categories:
                 category_map2[row[key]] = category_map[row["category"]]
 
-            #            from pprint import pprint
-            #            pprint(category_map2)
-
             colors = []
             for row in labelinfo:
                 value = row[key]
@@ -76,6 +75,40 @@ def load_categories_csv(filename, labelinfo):
 
         else:
             notify(f"no valid key column found in categories file '{filename}'.")
+    else:
+        notify(f"nothing in categories file '{filename}'?!")
+
+    return category_map, colors
+
+
+def load_categories_csv_for_labels(filename, queries):
+    "Load a categories CSV that must use label name."
+    with sourmash_args.FileInputCSV(filename) as r:
+        categories = list(r)
+
+    category_map = {}
+    colors = None
+    if categories:
+        key = "label"
+
+        category_values = list(set([row["category"] for row in categories]))
+        category_values.sort()
+
+        cat_colors = list(map(plt.cm.tab10, range(len(category_values))))
+        category_map = {}
+        for v, color in zip(category_values, cat_colors):
+            category_map[v] = color
+
+        category_map2 = {}
+        for row in categories:
+            label = row[key]
+            cat = row["category"]
+            category_map2[label] = category_map[cat]
+
+        colors = []
+        for label, idx in queries:
+            color = category_map2[label]
+            colors.append(color)
     else:
         notify(f"nothing in categories file '{filename}'?!")
 
@@ -157,7 +190,6 @@ class Command_Plot2(CommandLinePlugin):
         )
 
     def main(self, args):
-        # code that we actually run.
         super().main(args)
         plot2(args)
 
@@ -314,8 +346,6 @@ def plot2(args):
         # @CTB 'distance'...? does this conflict with 'linkage'?
         assignments = sch.fcluster(linkage_Z, cut_point, "distance")
 
-        # print(assignments)
-
         # reorganize labelinfo by cluster
         cluster_d = defaultdict(list)
         for cluster_n, label_row in zip(assignments, labelinfo):
@@ -324,10 +354,6 @@ def plot2(args):
         # output labelinfo rows.
         notify(f"writing {len(cluster_d)} clusters.")
         for k, v in cluster_d.items():
-            # print(f"cluster {k}")
-            # for row in v:
-            #    print(f"\t{row['label']}")
-
             filename = f"{prefix}.{k}.csv"
             with sourmash_args.FileOutputCSV(filename) as fp:
                 w = csv.DictWriter(fp, fieldnames=labelinfo[0].keys())
@@ -358,7 +384,6 @@ class Command_MDS(CommandLinePlugin):
         subparser.add_argument("-o", "--output-figure", required=True)
 
     def main(self, args):
-        # code that we actually run.
         super().main(args)
 
         with open(args.comparison_matrix, "rb") as f:
@@ -372,40 +397,166 @@ class Command_MDS(CommandLinePlugin):
         if args.categories_csv:
             category_map, colors = load_categories_csv(args.categories_csv, labelinfo)
 
-        # Example usage
-        # Assume object indices instead of names for simplicity
-        # similarity_tuples = [(0, 1, 0.7), (0, 2, 0.4), (1, 2, 0.5)]
-        # num_objects = 3  # You should know the total number of objects
-        # sparse_matrix = create_sparse_similarity_matrix(similarity_tuples, num_objects)
-        plot_mds_sparse(mat, labelinfo, colors=colors, category_map=category_map)
+        dissim = 1 - mat
+        plot_mds(dissim, colors=colors, category_map=category_map)
 
         plt.savefig(args.output_figure)
 
 
-# @CTB unused for now
-def create_sparse_similarity_matrix(tuples, num_objects):
+class Command_PairwiseToCompare(CommandLinePlugin):
+    command = "pairwise_to_compare"  # 'scripts <command>'
+    description = "convert pairwise CSV output to a 'compare' matrix"  # output with -h
+    usage = "sourmash scripts pairwise_to_compare <pairwise_csv> -o <matrix_cmp>"  # output with no args/bad args as well as -h
+    epilog = epilog  # output with -h
+    formatter_class = argparse.RawTextHelpFormatter  # do not reformat multiline
+
+    def __init__(self, subparser):
+        super().__init__(subparser)
+
+        subparser.add_argument(
+            "pairwise_csv", help="output from 'sourmash scripts pairwise'"
+        )
+        subparser.add_argument('-o', '--output-matrix', required=True)
+        subparser.add_argument('--labels-to')
+
+    def main(self, args):
+        super().main(args)
+
+        with sourmash_args.FileInputCSV(args.pairwise_csv) as r:
+            rows = list(r)
+
+        # pick out all the distinct queries/matches.
+        print(f"loaded {len(rows)} rows from '{args.pairwise_csv}'")
+        queries = set( [ row['query_name'] for row in rows ] )
+        queries.update(set( [ row['match_name'] for row in rows ] ))
+        print(f"loaded {len(queries)} total elements")
+
+        queries = list(sorted(queries))
+
+        sample_d = {}
+        for n, sample_name in enumerate(queries):
+            sample_d[sample_name] = n
+
+        assert n == len(queries) - 1
+
+        mat = numpy.zeros((len(queries), len(queries)))
+
+        pairs = []
+        for row in rows:
+            # get unique indices for each query/match pair.
+            q = row['query_name']
+            qi = sample_d[q]
+            m = row['match_name']
+            mi = sample_d[m]
+            jaccard = float(row['jaccard'])
+
+            mat[qi, mi] = jaccard
+            mat[mi, qi] = jaccard
+
+        numpy.fill_diagonal(mat, 1)
+
+        with open(args.output_matrix, 'wb') as fp:
+            numpy.save(fp, mat)
+
+        with open(args.output_matrix + '.labels.txt', 'wt') as fp:
+            for label, n in sample_d.items():
+                fp.write(label + "\n")
+
+        if args.labels_to:
+            with open(args.labels_to, 'w', newline="") as fp:
+                w = csv.writer(fp)
+                w.writerow(['sort_order', 'label'])
+                for label, n in sample_d.items():
+                    w.writerow([n, label])
+
+
+class Command_MDS2(CommandLinePlugin):
+    command = "mds2"  # 'scripts <command>'
+    description = "plot a 2-D multidimensional scaling plot from branchwater plugin's 'pairwise' output"  # output with -h
+    usage = "sourmash scripts mds2 <matrix> -o <figure.png>"  # output with no args/bad args as well as -h
+    epilog = epilog  # output with -h
+    formatter_class = argparse.RawTextHelpFormatter  # do not reformat multiline
+
+    def __init__(self, subparser):
+        super().__init__(subparser)
+
+        subparser.add_argument(
+            "pairwise_csv", help="output from 'sourmash scripts pairwise'"
+        )
+        subparser.add_argument(
+            "-C", "--categories-csv", help="CSV mapping label columns to categories"
+        )
+        subparser.add_argument("-o", "--output-figure", required=True)
+
+    def main(self, args):
+        super().main(args)
+
+        with sourmash_args.FileInputCSV(args.pairwise_csv) as r:
+            rows = list(r)
+
+        # pick out all the distinct queries/matches.
+        print(f"loaded {len(rows)} rows from '{args.pairwise_csv}'")
+        queries = set( [ row['query_name'] for row in rows ] )
+        queries.update(set( [ row['match_name'] for row in rows ] ))
+        print(f"loaded {len(queries)} total elements")
+
+        queries = list(sorted(queries))
+
+        sample_d = {}
+        for n, sample_name in enumerate(queries):
+            sample_d[sample_name] = n
+
+        assert n == len(queries) - 1
+
+        mat = numpy.zeros((len(queries), len(queries)))
+
+        pairs = []
+        for row in rows:
+            # get unique indices for each query/match pair.
+            q = row['query_name']
+            qi = sample_d[q]
+            m = row['match_name']
+            mi = sample_d[m]
+            jaccard = float(row['jaccard'])
+
+            mat[qi, mi] = jaccard
+            mat[mi, qi] = jaccard
+
+        numpy.fill_diagonal(mat, 1)
+
+        # load categories?
+        category_map = None
+        colors = None
+        if args.categories_csv:
+            category_map, colors = load_categories_csv_for_labels(args.categories_csv, sample_d.items())
+
+        dissim = 1 - mat
+        plot_mds(dissim, colors=colors, category_map=category_map)
+
+        plt.savefig(args.output_figure)
+
+
+#@CTB unused again...
+def create_sparse_dissimilarity_matrix(tuples, num_objects):
     # Initialize matrix in LIL format for efficient setup
     similarity_matrix = lil_matrix((num_objects, num_objects))
 
     for obj1, obj2, similarity in tuples:
-        similarity_matrix[obj1, obj2] = similarity
+        similarity_matrix[obj1, obj2] = 1 - similarity
         if obj1 != obj2:
-            similarity_matrix[obj2, obj1] = similarity
+            similarity_matrix[obj2, obj1] = 1 - similarity
 
     # Ensure diagonal elements are 1
     similarity_matrix.setdiag(1)
 
-    # Convert to CSR format for efficient operations later
-    return similarity_matrix.tocsr()
+    # Convert to array format
+    # @CTB use tocsr or tocoo instead??
+    return similarity_matrix.toarray()
 
 
-def plot_mds_sparse(matrix, labelinfo, *, colors=None, category_map=None):
-    # Convert sparse similarity to dense dissimilarity matrix
-    # dissimilarities = 1 - matrix.toarray()
-    dissimilarities = 1 - matrix
-
+def plot_mds(matrix, *, colors=None, category_map=None):
     mds = MDS(n_components=2, dissimilarity="precomputed", random_state=42)
-    mds_coords = mds.fit_transform(dissimilarities)
+    mds_coords = mds.fit_transform(matrix)
     plt.scatter(mds_coords[:, 0], mds_coords[:, 1], color=colors)
     plt.xlabel("Dimension 1")
     plt.ylabel("Dimension 2")
