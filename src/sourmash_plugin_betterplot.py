@@ -666,6 +666,14 @@ class Command_Plot3(CommandLinePlugin):
             xticklabels=[],
             cmap="flare",
         )
+
+        if colors and category_map:
+            # create a custom legend of just the categories
+            legend_elements = []
+            for k, v in category_map.items():
+                legend_elements.append(Line2D([0], [0], color=v, label=k, marker="o", lw=0))
+            fig.ax_col_dendrogram.legend(handles=legend_elements)
+
         # turn off column dendrogram
         fig.ax_row_dendrogram.set_visible(False)
 
