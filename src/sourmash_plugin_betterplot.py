@@ -524,17 +524,6 @@ class Command_MDS2(CommandLinePlugin):
 
         numpy.fill_diagonal(mat, 1)
 
-        # useful debugging code that we should save ;)
-        #with open('XXX.mat', 'wb') as fp:
-        #    numpy.save(fp, mat)
-
-        #with open('XXX.mat.labels.csv', 'wt') as fp:
-        #    w = csv.writer(fp)
-        #    w.writerow(['sort_order', 'label'])
-
-        #    for label, n in sample_d.items():
-        #        w.writerow([n, label])
-
         # load categories?
         category_map = None
         colors = None
