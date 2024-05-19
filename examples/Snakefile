@@ -10,6 +10,7 @@ rule all:
         "mds.10sketches.cmp.png",
         "mds2.10sketches.cmp.png",
         "plot2.pairwise.10sketches.cmp.png",
+        "plot3.10sketches.cmp.png",
 
 rule cmp_3sketches:
     input:
@@ -144,4 +145,17 @@ rule plot2_10sketches_pairwise:
     shell: """
         sourmash scripts plot2 {input.cmp} {input.labels_csv} -o {output} \
             --figsize-x=5 --figsize-y=3
+    """
+
+
+rule plot3_10sketches:
+    input:
+        cmp="10sketches.cmp",
+        labels="10sketches.cmp.labels_to.csv",
+        categories="10sketches-categories.csv",
+    output:
+        "plot3.10sketches.cmp.png",
+    shell: """
+        sourmash scripts plot3 {input.cmp} {input.labels} -o {output} \
+            -C {input.categories}
     """

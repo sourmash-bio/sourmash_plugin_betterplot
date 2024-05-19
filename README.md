@@ -47,7 +47,7 @@ See the examples below.
 The command lines below are executable in the `examples/` subdirectory
 of the repository after installing the plugin.
 
-### Basic 3 sketches example: plot2
+### `plot2` - basic 3 sketches example
 
 Compare 3 sketches, and cluster.
 
@@ -64,7 +64,7 @@ produces this plot:
 
 ![basic 3-sketches example](examples/plot2.3sketches.cmp.png)
 
-### 3 sketches example with a cut line: plot2 --cut-point 1.2
+### `plot2` - 3 sketches example with a cut line: plot2 --cut-point 1.2
 
 Compare 3 sketches, cluster, and show a cut point.
 
@@ -82,7 +82,7 @@ produces this plot:
 
 ![3-sketches example w/cut line](examples/plot2.cut.3sketches.cmp.png)
 
-### Dendrogram of 10 sketches with a cut line + cluster extraction
+### `plot2` - dendrogram of 10 sketches with a cut line + cluster extraction
 
 Compare 10 sketches, cluster, and use a cut point to extract
 multiple clusters. Use `--dendrogram-only` to plot just the dendrogram.
@@ -104,11 +104,11 @@ produces this plot:
 
 as well as a set of 6 clusters to `10sketches.cmp.*.csv`.
 
-### Multidimensional Scaling (MDS) plot of 10-sketch comparison
+### `mds`- multidimensional Scaling (MDS) plot of 10-sketch comparison
 
 Use MDS to display a comparison.
 
-This command:
+These commands:
 ```
 sourmash compare sketches/{2,47,48,49,51,52,53,59,60}.sig.zip \
     -o 10sketches.cmp \
@@ -122,7 +122,7 @@ sourmash scripts mds 10sketches.cmp 10sketches.cmp.labels_to.csv \
 produces this plot:
 ![10-sketches plotted using MDS](examples/mds.10sketches.cmp.png)
 
-### Multidimensional Scaling (MDS) plot of 10-sketch comparisons from `pairwise` output
+### `mds2` - multidimensional Scaling (MDS) plot of 10-sketch comparisons from `pairwise` output
 
 Use MDS to display a sparse comparison created using the
 [branchwater plugin's](https://github.com/sourmash-bio/sourmash_plugin_branchwater)
@@ -145,7 +145,7 @@ sourmash scripts mds 10sketches.cmp \
 produces this plot:
 ![10-sketches plotted using MDS2](examples/mds2.10sketches.cmp.png)
 
-### Convert `pairwise` output to `sourmash compare` output and plot
+### `pairwise_to_compare` - convert `pairwise` output to `sourmash compare` output and plot
 
 These commands:
 ```
@@ -168,6 +168,26 @@ sourmash scripts plot2 10sketches.pairwise.cmp \
 produce this plot:
 
 ![10-sketches plotted from pairwise](examples/plot2.pairwise.10sketches.cmp.png)
+
+### `plot3` - seaborn clustermap with color categories
+
+The
+[`seaborn` clustermap](https://seaborn.pydata.org/generated/seaborn.clustermap.html)
+offers some nice visualization options.
+
+These commands:
+```
+sourmash compare sketches/{2,47,48,49,51,52,53,59,60}.sig.zip \
+    -o 10sketches.cmp \
+    --labels-to 10sketches.cmp.labels_to.csv
+
+sourmash scripts plot3 10sketches.cmp 10sketches.cmp.labels_to.csv \
+    -o plot3.10sketches.cmp.png -C 10sketches-categories.csv
+```
+
+produce this plot:
+
+![plot3 10 sketches](examples/plot3.10sketches.cmp.png)
 
 
 ## Support
