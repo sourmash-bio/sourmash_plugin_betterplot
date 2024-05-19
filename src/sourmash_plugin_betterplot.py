@@ -65,9 +65,6 @@ def load_categories_csv(filename, labelinfo):
             for row in categories:
                 category_map2[row[key]] = category_map[row["category"]]
 
-            #            from pprint import pprint
-            #            pprint(category_map2)
-
             colors = []
             for row in labelinfo:
                 value = row[key]
@@ -93,6 +90,8 @@ def load_categories_csv_for_labels(filename, queries):
         key = "label"
 
         category_values = list(set([row["category"] for row in categories]))
+        category_values.sort()
+
         cat_colors = list(map(plt.cm.tab10, range(len(category_values))))
         category_map = {}
         for v, color in zip(category_values, cat_colors):
@@ -102,11 +101,7 @@ def load_categories_csv_for_labels(filename, queries):
         for row in categories:
             label = row[key]
             cat = row["category"]
-            print('XXX', cat, label)
             category_map2[label] = category_map[cat]
-
-        #from pprint import pprint
-        #pprint(category_map2)
 
         colors = []
         for label, idx in queries:
@@ -350,8 +345,6 @@ def plot2(args):
         # @CTB 'distance'...? does this conflict with 'linkage'?
         assignments = sch.fcluster(linkage_Z, cut_point, "distance")
 
-        # print(assignments)
-
         # reorganize labelinfo by cluster
         cluster_d = defaultdict(list)
         for cluster_n, label_row in zip(assignments, labelinfo):
@@ -360,10 +353,6 @@ def plot2(args):
         # output labelinfo rows.
         notify(f"writing {len(cluster_d)} clusters.")
         for k, v in cluster_d.items():
-            # print(f"cluster {k}")
-            # for row in v:
-            #    print(f"\t{row['label']}")
-
             filename = f"{prefix}.{k}.csv"
             with sourmash_args.FileOutputCSV(filename) as fp:
                 w = csv.DictWriter(fp, fieldnames=labelinfo[0].keys())
@@ -444,31 +433,45 @@ class Command_MDS2(CommandLinePlugin):
         with sourmash_args.FileInputCSV(args.comparison_csv) as r:
             rows = list(r)
 
+        # pick out all the distinct queries/matches.
         print(f"loaded {len(rows)} rows from '{args.comparison_csv}'")
         queries = set( [ row['query_name'] for row in rows ] )
         queries.update(set( [ row['match_name'] for row in rows ] ))
         print(f"loaded {len(queries)} total elements")
 
+        queries = list(sorted(queries))
+
         sample_d = {}
         for n, sample_name in enumerate(queries):
             sample_d[sample_name] = n
 
-        assert n <= len(queries)
+        assert n == len(queries) - 1
 
         mat = numpy.zeros((len(queries), len(queries)))
 
         pairs = []
         for row in rows:
+            # get unique indices for each query/match pair.
             q = row['query_name']
             qi = sample_d[q]
             m = row['match_name']
             mi = sample_d[m]
             jaccard = float(row['jaccard'])
 
-            mat[qi, mi] = 1 - jaccard
-            mat[mi, qi] = 1 - jaccard
+            mat[qi, mi] = jaccard
+            mat[mi, qi] = jaccard
 
         numpy.fill_diagonal(mat, 1)
+
+        with open('XXX.mat', 'wb') as fp:
+            numpy.save(fp, mat)
+
+        with open('XXX.mat.labels.csv', 'wt') as fp:
+            w = csv.writer(fp)
+            w.writerow(['sort_order', 'label'])
+
+            for label, n in sample_d.items():
+                w.writerow([n, label])
 
         # Example usage
         # Assume object indices instead of names for simplicity
@@ -480,11 +483,10 @@ class Command_MDS2(CommandLinePlugin):
         category_map = None
         colors = None
         if args.categories_csv:
-            xx = sample_d.items()
-            xx = list(sorted(xx, key=lambda x: x[1]))
-            category_map, colors = load_categories_csv_for_labels(args.categories_csv, xx)
+            category_map, colors = load_categories_csv_for_labels(args.categories_csv, sample_d.items())
 
-        plot_mds(mat, colors=colors, category_map=category_map)
+        dissim = 1 - mat
+        plot_mds(dissim, colors=colors, category_map=category_map)
 
         plt.savefig(args.output_figure)
 
