@@ -463,15 +463,16 @@ class Command_MDS2(CommandLinePlugin):
 
         numpy.fill_diagonal(mat, 1)
 
-        with open('XXX.mat', 'wb') as fp:
-            numpy.save(fp, mat)
+        # useful debugging code that we should save ;)
+        #with open('XXX.mat', 'wb') as fp:
+        #    numpy.save(fp, mat)
 
-        with open('XXX.mat.labels.csv', 'wt') as fp:
-            w = csv.writer(fp)
-            w.writerow(['sort_order', 'label'])
+        #with open('XXX.mat.labels.csv', 'wt') as fp:
+        #    w = csv.writer(fp)
+        #    w.writerow(['sort_order', 'label'])
 
-            for label, n in sample_d.items():
-                w.writerow([n, label])
+        #    for label, n in sample_d.items():
+        #        w.writerow([n, label])
 
         # Example usage
         # Assume object indices instead of names for simplicity
