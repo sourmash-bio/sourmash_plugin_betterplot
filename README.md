@@ -122,7 +122,7 @@ sourmash scripts mds 10sketches.cmp 10sketches.cmp.labels_to.csv \
 produces this plot:
 ![10-sketches plotted using MDS](examples/mds.10sketches.cmp.png)
 
-### Multidimensional Scaling (MDS) plot of 10-sketch comparisons from 'pairwise' output
+### Multidimensional Scaling (MDS) plot of 10-sketch comparisons from `pairwise` output
 
 Use MDS to display a sparse comparison created using the
 [branchwater plugin's](https://github.com/sourmash-bio/sourmash_plugin_branchwater)
@@ -144,6 +144,31 @@ sourmash scripts mds 10sketches.cmp \
 
 produces this plot:
 ![10-sketches plotted using MDS2](examples/mds2.10sketches.cmp.png)
+
+### Convert `pairwise` output to `sourmash compare` output and plot
+
+These commands:
+```
+# build pairwise
+sourmash sig cat sketches/{2,47,48,49,51,52,53,59,60}.sig.zip \
+    -o 10sketches.sig.zip
+sourmash scripts pairwise 10sketches.sig.zip -o 10sketches.pairwise.csv
+
+# convert pairwise
+sourmash scripts pairwise_to_compare 10sketches.pairwise.csv \
+    -o 10sketches.pairwise.cmp \
+    --labels-to 10sketches.pairwise.cmp.labels_to.csv
+    
+# plot!
+sourmash scripts plot2 10sketches.pairwise.cmp \
+    10sketches.pairwise.cmp.labels_to.csv \
+    -o plot2.pairwise.10sketches.cmp.png
+```
+
+produce this plot:
+
+![10-sketches plotted from pairwise](examples/plot2.pairwise.10sketches.cmp.png)
+
 
 ## Support
 

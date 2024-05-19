@@ -403,6 +403,73 @@ class Command_MDS(CommandLinePlugin):
         plt.savefig(args.output_figure)
 
 
+class Command_PairwiseToCompare(CommandLinePlugin):
+    command = "pairwise_to_compare"  # 'scripts <command>'
+    description = "convert pairwise CSV output to a 'compare' matrix"  # output with -h
+    usage = "sourmash scripts pairwise_to_compare <pairwise_csv> -o <matrix_cmp>"  # output with no args/bad args as well as -h
+    epilog = epilog  # output with -h
+    formatter_class = argparse.RawTextHelpFormatter  # do not reformat multiline
+
+    def __init__(self, subparser):
+        super().__init__(subparser)
+
+        subparser.add_argument(
+            "pairwise_csv", help="output from 'sourmash scripts pairwise'"
+        )
+        subparser.add_argument('-o', '--output-matrix', required=True)
+        subparser.add_argument('--labels-to')
+
+    def main(self, args):
+        super().main(args)
+
+        with sourmash_args.FileInputCSV(args.pairwise_csv) as r:
+            rows = list(r)
+
+        # pick out all the distinct queries/matches.
+        print(f"loaded {len(rows)} rows from '{args.pairwise_csv}'")
+        queries = set( [ row['query_name'] for row in rows ] )
+        queries.update(set( [ row['match_name'] for row in rows ] ))
+        print(f"loaded {len(queries)} total elements")
+
+        queries = list(sorted(queries))
+
+        sample_d = {}
+        for n, sample_name in enumerate(queries):
+            sample_d[sample_name] = n
+
+        assert n == len(queries) - 1
+
+        mat = numpy.zeros((len(queries), len(queries)))
+
+        pairs = []
+        for row in rows:
+            # get unique indices for each query/match pair.
+            q = row['query_name']
+            qi = sample_d[q]
+            m = row['match_name']
+            mi = sample_d[m]
+            jaccard = float(row['jaccard'])
+
+            mat[qi, mi] = jaccard
+            mat[mi, qi] = jaccard
+
+        numpy.fill_diagonal(mat, 1)
+
+        with open(args.output_matrix, 'wb') as fp:
+            numpy.save(fp, mat)
+
+        with open(args.output_matrix + '.labels.txt', 'wt') as fp:
+            for label, n in sample_d.items():
+                fp.write(label + "\n")
+
+        if args.labels_to:
+            with open(args.labels_to, 'w', newline="") as fp:
+                w = csv.writer(fp)
+                w.writerow(['sort_order', 'label'])
+                for label, n in sample_d.items():
+                    w.writerow([n, label])
+
+
 class Command_MDS2(CommandLinePlugin):
     command = "mds2"  # 'scripts <command>'
     description = "plot a 2-D multidimensional scaling plot from branchwater plugin's 'pairwise' output"  # output with -h
@@ -414,7 +481,7 @@ class Command_MDS2(CommandLinePlugin):
         super().__init__(subparser)
 
         subparser.add_argument(
-            "comparison_csv", help="output from 'sourmash scripts pairwise'"
+            "pairwise_csv", help="output from 'sourmash scripts pairwise'"
         )
         subparser.add_argument(
             "-C", "--categories-csv", help="CSV mapping label columns to categories"
@@ -424,11 +491,11 @@ class Command_MDS2(CommandLinePlugin):
     def main(self, args):
         super().main(args)
 
-        with sourmash_args.FileInputCSV(args.comparison_csv) as r:
+        with sourmash_args.FileInputCSV(args.pairwise_csv) as r:
             rows = list(r)
 
         # pick out all the distinct queries/matches.
-        print(f"loaded {len(rows)} rows from '{args.comparison_csv}'")
+        print(f"loaded {len(rows)} rows from '{args.pairwise_csv}'")
         queries = set( [ row['query_name'] for row in rows ] )
         queries.update(set( [ row['match_name'] for row in rows ] ))
         print(f"loaded {len(queries)} total elements")
@@ -480,6 +547,7 @@ class Command_MDS2(CommandLinePlugin):
         plt.savefig(args.output_figure)
 
 
+#@CTB unused again...
 def create_sparse_dissimilarity_matrix(tuples, num_objects):
     # Initialize matrix in LIL format for efficient setup
     similarity_matrix = lil_matrix((num_objects, num_objects))

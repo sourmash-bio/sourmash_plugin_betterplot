@@ -9,6 +9,7 @@ rule all:
         "plot2.cut.dendro.10sketches.cmp.png",
         "mds.10sketches.cmp.png",
         "mds2.10sketches.cmp.png",
+        "plot2.pairwise.10sketches.cmp.png",
 
 rule cmp_3sketches:
     input:
@@ -119,4 +120,28 @@ rule mds2_10sketches:
     shell: """
         sourmash scripts mds2 {input.cmp} -o {output} \
            -C {input.categories}
+    """
+
+rule convert_10sketches_pairwise_to_cmp:
+    input:
+        cmp="10sketches.pairwise.csv",
+    output:
+        cmp="10sketches.pairwise.cmp",
+        labels_txt="10sketches.pairwise.cmp.labels.txt",
+        labels_csv="10sketches.pairwise.cmp.labels_to.csv",
+    shell: """
+        sourmash scripts pairwise_to_compare {input.cmp} -o {output.cmp} \
+            --labels-to {output.labels_csv}
+    """
+        
+
+rule plot2_10sketches_pairwise:
+    input:
+        cmp="10sketches.pairwise.cmp",
+        labels_csv="10sketches.pairwise.cmp.labels_to.csv",
+    output:
+        "plot2.pairwise.10sketches.cmp.png",
+    shell: """
+        sourmash scripts plot2 {input.cmp} {input.labels_csv} -o {output} \
+            --figsize-x=5 --figsize-y=3
     """

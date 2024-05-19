@@ -15,3 +15,4 @@ license = { text = "BSD 3-Clause License" }
 plot2_command = "sourmash_plugin_betterplot:Command_Plot2"
 mds_command = "sourmash_plugin_betterplot:Command_MDS"
 mds2_command = "sourmash_plugin_betterplot:Command_MDS2"
+pairwise_to_compare_command = "sourmash_plugin_betterplot:Command_PairwiseToCompare"
