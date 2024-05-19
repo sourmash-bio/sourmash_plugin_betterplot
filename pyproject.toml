@@ -6,7 +6,7 @@ requires-python = ">=3.10"
 version = "0.3"
 
 dependencies = ["sourmash>=4.8.8,<5",
-                "matplotlib", "numpy", "scipy", "scikit-learn"]
+                "matplotlib", "numpy", "scipy", "scikit-learn", "seaborn"]
 
 [metadata]
 license = { text = "BSD 3-Clause License" }

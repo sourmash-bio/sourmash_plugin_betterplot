@@ -152,8 +152,10 @@ rule plot3_10sketches:
     input:
         cmp="10sketches.cmp",
         labels="10sketches.cmp.labels_to.csv",
+        categories="10sketches-categories.csv",
     output:
         "plot3.10sketches.cmp.png",
     shell: """
-        sourmash scripts plot3 {input.cmp} {input.labels} -o {output}
+        sourmash scripts plot3 {input.cmp} {input.labels} -o {output} \
+            -C {input.categories}
     """

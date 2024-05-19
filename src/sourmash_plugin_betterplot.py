@@ -12,7 +12,6 @@ import os
 import csv
 from collections import defaultdict
 
-
 import numpy
 import pylab
 import matplotlib.pyplot as plt
@@ -20,6 +19,7 @@ import scipy.cluster.hierarchy as sch
 from sklearn.manifold import MDS
 from scipy.sparse import lil_matrix, csr_matrix
 from matplotlib.lines import Line2D
+import seaborn as sns
 
 from sourmash.logging import debug_literal, error, notify, print_results
 from sourmash.plugins import CommandLinePlugin
@@ -331,7 +331,7 @@ def plot2(args):
         dendrogram_only=args.dendrogram_only,
     )
     fig.savefig(args.output_figure, bbox_inches="tight")
-    notify(f"wrote numpy distance matrix to: {args.output_figure}")
+    notify(f"wrote plot to: {args.output_figure}")
 
     # re-order labels along rows, top to bottom
     # reordered_labels = [labelinfo[i] for i in idx1]
@@ -610,36 +610,60 @@ class Command_Plot3(CommandLinePlugin):
             help="random seed for --subsample; default=1",
         )
         subparser.add_argument(
-            "-f",
-            "--force",
-            action="store_true",
-            help="forcibly plot non-distance matrices",
-        )
-        subparser.add_argument(
             "-o", "--output-figure", help="output figure to this file", required=True
         )
         subparser.add_argument(
-            "--cut-point",
-            type=float,
-            help="cut point for dendrogram, to produce clusters",
-        )
-        subparser.add_argument(
-            "--cluster-out", action="store_true", help="output clusters"
-        )
-        subparser.add_argument(
-            "--cluster-prefix",
-            default=None,
-            help="prefix to prepend to cluster names; default is cmp file",
-        )
-        subparser.add_argument(
-            "--dendrogram-only",
-            "--no-matrix",
-            action="store_true",
-            help="plot only the dendrogram",
+            "-C", "--categories-csv", help="CSV mapping label columns to categories"
         )
 
     def main(self, args):
         super().main(args)
-        plot2(args)
+        D_filename = args.distances
 
+        notify(f"loading comparison matrix from {D_filename}...")
+        with open(D_filename, "rb") as f:
+            D = numpy.load(f)
+        notify(f"...got {D.shape[0]} x {D.shape[1]} matrix.", *D.shape)
 
+        labelfilename = args.labels_from
+        notify(f"loading labels from CSV file '{labelfilename}'")
+        labelinfo = load_labelinfo_csv(labelfilename)
+
+        if len(labelinfo) != D.shape[0]:
+            error("{} labels != matrix size, exiting", len(labeltext))
+            sys.exit(-1)
+
+        # load categories?
+        category_map = None
+        colors = None
+        if args.categories_csv:
+            category_map, colors = load_categories_csv(args.categories_csv, labelinfo)
+        # subsample?
+        if args.subsample:
+            numpy.random.seed(args.subsample_seed)
+
+            sample_idx = list(range(len(labelinfo)))
+            numpy.random.shuffle(sample_idx)
+            sample_idx = sample_idx[: args.subsample]
+
+            np_idx = numpy.array(sample_idx)
+            D = D[numpy.ix_(np_idx, np_idx)]
+            labelinfo = [labelinfo[idx] for idx in sample_idx]
+
+        # turn into dissimilarity matrix
+        dissim = 1 - D
+        #dissim = D
+
+        #plot!
+        fig = sns.clustermap(
+            dissim,
+            figsize=(args.figsize_x, args.figsize_y),
+            vmin=args.vmin,
+            vmax=args.vmax,
+            col_colors=colors,
+        )
+        # turn off column dendrogram
+        fig.ax_row_dendrogram.set_visible(False)
+
+        fig.savefig(args.output_figure, bbox_inches="tight")
+        notify(f"wrote plot to: {args.output_figure}")
