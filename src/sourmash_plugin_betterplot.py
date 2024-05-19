@@ -651,8 +651,9 @@ class Command_Plot3(CommandLinePlugin):
             labelinfo = [labelinfo[idx] for idx in sample_idx]
 
         # turn into dissimilarity matrix
-        dissim = 1 - D
-        #dissim = D
+        #dissim = 1 - D
+        #numpy.fill_diagonal(dissim, 1)
+        dissim = D
 
         #plot!
         fig = sns.clustermap(
@@ -663,6 +664,7 @@ class Command_Plot3(CommandLinePlugin):
             col_colors=colors,
             yticklabels=[ x["label"].split(' ')[0] for x in labelinfo ],
             xticklabels=[],
+            cmap="flare",
         )
         # turn off column dendrogram
         fig.ax_row_dendrogram.set_visible(False)
