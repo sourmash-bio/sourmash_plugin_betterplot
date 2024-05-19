@@ -174,9 +174,10 @@ rule r10sketches_manysearch:
 rule clustermap1_10sketches:
     input:
         cmp="10sketches.manysearch.csv",
+        categories="10sketches-categories.csv",
     output:
         "clustermap1.10sketches.png",
     shell: """
         sourmash scripts clustermap1 {input.cmp} -o {output} \
-            -u containment
+            -u containment -R {input.categories} -C {input.categories}
     """
