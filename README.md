@@ -169,6 +169,22 @@ produce this plot:
 
 ![10-sketches plotted from pairwise](examples/plot2.pairwise.10sketches.cmp.png)
 
+### plot3
+
+These commands:
+```
+sourmash compare sketches/{2,47,48,49,51,52,53,59,60}.sig.zip \
+    -o 10sketches.cmp \
+    --labels-to 10sketches.cmp.labels_to.csv
+
+sourmash scripts plot3 10sketches.cmp 10sketches.cmp.labels_to.csv \
+    -o plot3.10sketches.cmp.png
+```
+
+produce this pot:
+
+![plot3 10 sketches](examples/plot3.10sketches.cmp.png)
+
 
 ## Support
 

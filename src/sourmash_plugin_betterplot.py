@@ -567,3 +567,79 @@ def plot_mds(matrix, *, colors=None, category_map=None):
         for k, v in category_map.items():
             legend_elements.append(Line2D([0], [0], color=v, label=k, marker="o", lw=0))
         plt.legend(handles=legend_elements)
+
+
+class Command_Plot3(CommandLinePlugin):
+    command = "plot3"  # 'scripts <command>'
+    description = "plot a distance matrix produced by 'sourmash compare'"  # output with -h
+    usage = "sourmash scripts plot <matrix> <labels_csv> -o <output.png>"  # output with no args/bad args as well as -h
+    epilog = epilog  # output with -h
+    formatter_class = argparse.RawTextHelpFormatter  # do not reformat multiline
+
+    def __init__(self, subparser):
+        super().__init__(subparser)
+        subparser.add_argument("distances", help='output from "sourmash compare"')
+        subparser.add_argument(
+            "labels_from", help='output from "sourmash compare --labels-to"'
+        )
+        subparser.add_argument(
+            "--vmin",
+            default=0.0,
+            type=float,
+            help="lower limit of heatmap scale; default=%(default)f",
+        )
+        subparser.add_argument(
+            "--vmax",
+            default=1.0,
+            type=float,
+            help="upper limit of heatmap scale; default=%(default)f",
+        )
+        subparser.add_argument("--figsize-x", type=int, default=11)
+        subparser.add_argument("--figsize-y", type=int, default=8)
+        subparser.add_argument(
+            "--subsample",
+            type=int,
+            metavar="N",
+            help="randomly downsample to this many samples, max",
+        )
+        subparser.add_argument(
+            "--subsample-seed",
+            type=int,
+            default=1,
+            metavar="S",
+            help="random seed for --subsample; default=1",
+        )
+        subparser.add_argument(
+            "-f",
+            "--force",
+            action="store_true",
+            help="forcibly plot non-distance matrices",
+        )
+        subparser.add_argument(
+            "-o", "--output-figure", help="output figure to this file", required=True
+        )
+        subparser.add_argument(
+            "--cut-point",
+            type=float,
+            help="cut point for dendrogram, to produce clusters",
+        )
+        subparser.add_argument(
+            "--cluster-out", action="store_true", help="output clusters"
+        )
+        subparser.add_argument(
+            "--cluster-prefix",
+            default=None,
+            help="prefix to prepend to cluster names; default is cmp file",
+        )
+        subparser.add_argument(
+            "--dendrogram-only",
+            "--no-matrix",
+            action="store_true",
+            help="plot only the dendrogram",
+        )
+
+    def main(self, args):
+        super().main(args)
+        plot2(args)
+
+
