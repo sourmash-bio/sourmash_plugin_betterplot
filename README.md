@@ -189,6 +189,14 @@ produce this plot:
 
 ![plot3 10 sketches](examples/plot3.10sketches.cmp.png)
 
+### `clustermap1` - seaborn clustermap for non-symmetric matrices
+
+These commands:
+```
+
+```
+
+![clustermap1 of 10 sketches x 10 sketches](examples/clustermap1.10sketches.png)
 
 ## Support
 
