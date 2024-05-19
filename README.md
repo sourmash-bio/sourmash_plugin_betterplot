@@ -15,12 +15,12 @@ produce basic distance matrix plots that are useful for comparing and
 visualizing the relationships between dozens to hundreds of
 genomes. And this is one of the most popular use cases for sourmash!
 
-But! The visualization can be improved a lot beyond the basic viz
-that `sourmash plot` produces, and there are a lot of only slightly
-more complicated use cases for comparing, clustering, and visualizing
-many genomes!
+However, the visualization can be improved a lot beyond the basic viz
+that `sourmash plot` produces. There are a lot of only slightly more
+complicated use cases for comparing, clustering, and visualizing many
+genomes!
 
-This plugin will explore some of these use cases!
+And this plugin exists to explore some of these use cases!
 
 Specific goals:
 
