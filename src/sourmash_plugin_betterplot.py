@@ -661,6 +661,8 @@ class Command_Plot3(CommandLinePlugin):
             vmin=args.vmin,
             vmax=args.vmax,
             col_colors=colors,
+            yticklabels=[ x["label"].split(' ')[0] for x in labelinfo ],
+            xticklabels=[],
         )
         # turn off column dendrogram
         fig.ax_row_dendrogram.set_visible(False)
