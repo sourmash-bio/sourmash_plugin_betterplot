@@ -108,7 +108,7 @@ rule r10sketches_pairwise:
     output:
         cmp="10sketches.pairwise.csv",
     shell: """
-        sourmash scripts pairwise {input} -o {output}
+        sourmash scripts pairwise {input} -o {output} --write-all
     """
 
 rule mds2_10sketches:

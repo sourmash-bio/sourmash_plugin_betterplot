@@ -156,7 +156,7 @@ sourmash scripts pairwise 10sketches.sig.zip -o 10sketches.pairwise.csv
 
 # convert pairwise
 sourmash scripts pairwise_to_compare 10sketches.pairwise.csv \
-    -o 10sketches.pairwise.cmp \
+    -o 10sketches.pairwise.cmp --write-all \
     --labels-to 10sketches.pairwise.cmp.labels_to.csv
     
 # plot!
