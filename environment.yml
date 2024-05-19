@@ -5,6 +5,7 @@ channels:
     - defaults
 dependencies:
     - sourmash>=4.8.8,<5
+    - sourmash_plugin_branchwater
     - pip
     - pytest
     - matplotlib
