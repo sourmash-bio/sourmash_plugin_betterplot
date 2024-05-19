@@ -56,6 +56,8 @@ def load_categories_csv(filename, labelinfo):
 
         if key:
             category_values = list(set([row["category"] for row in categories]))
+            category_values.sort()
+
             cat_colors = list(map(plt.cm.tab10, range(len(category_values))))
             category_map = {}
             for v, color in zip(category_values, cat_colors):
@@ -188,7 +190,6 @@ class Command_Plot2(CommandLinePlugin):
         )
 
     def main(self, args):
-        # code that we actually run.
         super().main(args)
         plot2(args)
 
@@ -383,7 +384,6 @@ class Command_MDS(CommandLinePlugin):
         subparser.add_argument("-o", "--output-figure", required=True)
 
     def main(self, args):
-        # code that we actually run.
         super().main(args)
 
         with open(args.comparison_matrix, "rb") as f:
@@ -397,11 +397,6 @@ class Command_MDS(CommandLinePlugin):
         if args.categories_csv:
             category_map, colors = load_categories_csv(args.categories_csv, labelinfo)
 
-        # Example usage
-        # Assume object indices instead of names for simplicity
-        # similarity_tuples = [(0, 1, 0.7), (0, 2, 0.4), (1, 2, 0.5)]
-        # num_objects = 3  # You should know the total number of objects
-        # sparse_matrix = create_sparse_similarity_matrix(similarity_tuples, num_objects)
         dissim = 1 - mat
         plot_mds(dissim, colors=colors, category_map=category_map)
 
@@ -427,7 +422,6 @@ class Command_MDS2(CommandLinePlugin):
         subparser.add_argument("-o", "--output-figure", required=True)
 
     def main(self, args):
-        # code that we actually run.
         super().main(args)
 
         with sourmash_args.FileInputCSV(args.comparison_csv) as r:
@@ -473,12 +467,6 @@ class Command_MDS2(CommandLinePlugin):
 
         #    for label, n in sample_d.items():
         #        w.writerow([n, label])
-
-        # Example usage
-        # Assume object indices instead of names for simplicity
-        # similarity_tuples = [(0, 1, 0.7), (0, 2, 0.4), (1, 2, 0.5)]
-        # num_objects = 3  # You should know the total number of objects
-        #mat = create_sparse_dissimilarity_matrix(pairs, len(queries))
 
         # load categories?
         category_map = None
