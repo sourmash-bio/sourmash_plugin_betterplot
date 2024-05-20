@@ -122,7 +122,9 @@ def load_categories_csv_for_labels(filename, queries):
 
 class Command_Plot2(CommandLinePlugin):
     command = "plot2"  # 'scripts <command>'
-    description = "plot a distance matrix produced by 'sourmash compare'"  # output with -h
+    description = (
+        "plot a distance matrix produced by 'sourmash compare'"  # output with -h
+    )
     usage = "sourmash scripts plot <matrix> <labels_csv> -o <output.png>"  # output with no args/bad args as well as -h
     epilog = epilog  # output with -h
     formatter_class = argparse.RawTextHelpFormatter  # do not reformat multiline
@@ -416,8 +418,8 @@ class Command_PairwiseToCompare(CommandLinePlugin):
         subparser.add_argument(
             "pairwise_csv", help="output from 'sourmash scripts pairwise'"
         )
-        subparser.add_argument('-o', '--output-matrix', required=True)
-        subparser.add_argument('--labels-to')
+        subparser.add_argument("-o", "--output-matrix", required=True)
+        subparser.add_argument("--labels-to")
 
     def main(self, args):
         super().main(args)
@@ -427,8 +429,8 @@ class Command_PairwiseToCompare(CommandLinePlugin):
 
         # pick out all the distinct queries/matches.
         print(f"loaded {len(rows)} rows from '{args.pairwise_csv}'")
-        queries = set( [ row['query_name'] for row in rows ] )
-        queries.update(set( [ row['match_name'] for row in rows ] ))
+        queries = set([row["query_name"] for row in rows])
+        queries.update(set([row["match_name"] for row in rows]))
         print(f"loaded {len(queries)} total elements")
 
         queries = list(sorted(queries))
@@ -443,28 +445,28 @@ class Command_PairwiseToCompare(CommandLinePlugin):
 
         for row in rows:
             # get unique indices for each query/match pair.
-            q = row['query_name']
+            q = row["query_name"]
             qi = sample_d[q]
-            m = row['match_name']
+            m = row["match_name"]
             mi = sample_d[m]
-            jaccard = float(row['jaccard'])
+            jaccard = float(row["jaccard"])
 
             mat[qi, mi] = jaccard
             mat[mi, qi] = jaccard
 
         numpy.fill_diagonal(mat, 1)
 
-        with open(args.output_matrix, 'wb') as fp:
+        with open(args.output_matrix, "wb") as fp:
             numpy.save(fp, mat)
 
-        with open(args.output_matrix + '.labels.txt', 'wt') as fp:
+        with open(args.output_matrix + ".labels.txt", "wt") as fp:
             for label, n in sample_d.items():
                 fp.write(label + "\n")
 
         if args.labels_to:
-            with open(args.labels_to, 'w', newline="") as fp:
+            with open(args.labels_to, "w", newline="") as fp:
                 w = csv.writer(fp)
-                w.writerow(['sort_order', 'label'])
+                w.writerow(["sort_order", "label"])
                 for label, n in sample_d.items():
                     w.writerow([n, label])
 
@@ -495,8 +497,8 @@ class Command_MDS2(CommandLinePlugin):
 
         # pick out all the distinct queries/matches.
         print(f"loaded {len(rows)} rows from '{args.pairwise_csv}'")
-        queries = set( [ row['query_name'] for row in rows ] )
-        queries.update(set( [ row['match_name'] for row in rows ] ))
+        queries = set([row["query_name"] for row in rows])
+        queries.update(set([row["match_name"] for row in rows]))
         print(f"loaded {len(queries)} total elements")
 
         queries = list(sorted(queries))
@@ -511,11 +513,11 @@ class Command_MDS2(CommandLinePlugin):
 
         for row in rows:
             # get unique indices for each query/match pair.
-            q = row['query_name']
+            q = row["query_name"]
             qi = sample_d[q]
-            m = row['match_name']
+            m = row["match_name"]
             mi = sample_d[m]
-            jaccard = float(row['jaccard'])
+            jaccard = float(row["jaccard"])
 
             mat[qi, mi] = jaccard
             mat[mi, qi] = jaccard
@@ -526,7 +528,9 @@ class Command_MDS2(CommandLinePlugin):
         category_map = None
         colors = None
         if args.categories_csv:
-            category_map, colors = load_categories_csv_for_labels(args.categories_csv, sample_d.items())
+            category_map, colors = load_categories_csv_for_labels(
+                args.categories_csv, sample_d.items()
+            )
 
         dissim = 1 - mat
         plot_mds(dissim, colors=colors, category_map=category_map)
@@ -534,7 +538,7 @@ class Command_MDS2(CommandLinePlugin):
         plt.savefig(args.output_figure)
 
 
-#@CTB unused again...
+# @CTB unused again...
 def create_sparse_dissimilarity_matrix(tuples, num_objects):
     # Initialize matrix in LIL format for efficient setup
     similarity_matrix = lil_matrix((num_objects, num_objects))
@@ -569,7 +573,9 @@ def plot_mds(matrix, *, colors=None, category_map=None):
 
 class Command_Plot3(CommandLinePlugin):
     command = "plot3"  # 'scripts <command>'
-    description = "plot a distance matrix produced by 'sourmash compare'"  # output with -h
+    description = (
+        "plot a distance matrix produced by 'sourmash compare'"  # output with -h
+    )
     usage = "sourmash scripts plot <matrix> <labels_csv> -o <output.png>"  # output with no args/bad args as well as -h
     epilog = epilog  # output with -h
     formatter_class = argparse.RawTextHelpFormatter  # do not reformat multiline
@@ -649,18 +655,18 @@ class Command_Plot3(CommandLinePlugin):
             labelinfo = [labelinfo[idx] for idx in sample_idx]
 
         # turn into dissimilarity matrix
-        #dissim = 1 - D
-        #numpy.fill_diagonal(dissim, 1)
+        # dissim = 1 - D
+        # numpy.fill_diagonal(dissim, 1)
         dissim = D
 
-        #plot!
+        # plot!
         fig = sns.clustermap(
             dissim,
             figsize=(args.figsize_x, args.figsize_y),
             vmin=args.vmin,
             vmax=args.vmax,
             col_colors=colors,
-            yticklabels=[ x["label"].split(' ')[0] for x in labelinfo ],
+            yticklabels=[x["label"].split(" ")[0] for x in labelinfo],
             xticklabels=[],
             cmap="flare",
         )
@@ -669,7 +675,9 @@ class Command_Plot3(CommandLinePlugin):
             # create a custom legend of just the categories
             legend_elements = []
             for k, v in category_map.items():
-                legend_elements.append(Line2D([0], [0], color=v, label=k, marker="o", lw=0))
+                legend_elements.append(
+                    Line2D([0], [0], color=v, label=k, marker="o", lw=0)
+                )
             fig.ax_col_dendrogram.legend(handles=legend_elements)
 
         # turn off column dendrogram
@@ -708,15 +716,24 @@ class Command_Clustermap1(CommandLinePlugin):
             "-o", "--output-figure", help="output figure to this file", required=True
         )
         subparser.add_argument(
-            "-R", "--row-categories-csv", help="CSV mapping labels @CTB query or against? to categories"
+            "-R",
+            "--row-categories-csv",
+            help="CSV mapping labels @CTB query or against? to categories",
         )
         subparser.add_argument(
-            "-C", "--col-categories-csv", help="CSV mapping labels @CTB query or against? to categories"
+            "-C",
+            "--col-categories-csv",
+            help="CSV mapping labels @CTB query or against? to categories",
         )
-        subparser.add_argument('-u', '--use-column', default='jaccard',
-                               help='column name to use in matrix (default: jaccard)')
-        subparser.add_argument('--boolean', action='store_true',
-                               help='convert values into 0/1')
+        subparser.add_argument(
+            "-u",
+            "--use-column",
+            default="jaccard",
+            help="column name to use in matrix (default: jaccard)",
+        )
+        subparser.add_argument(
+            "--boolean", action="store_true", help="convert values into 0/1"
+        )
 
     def main(self, args):
         super().main(args)
@@ -725,8 +742,8 @@ class Command_Clustermap1(CommandLinePlugin):
 
         # pick out all the distinct queries/matches.
         print(f"loaded {len(rows)} rows from '{args.manysearch_csv}'")
-        queries = set( [ row['query_name'] for row in rows ] )
-        against = set( [ row['match_name'] for row in rows ] )
+        queries = set([row["query_name"] for row in rows])
+        against = set([row["match_name"] for row in rows])
         print(f"loaded {len(queries)} x {len(against)} total elements")
 
         queries = list(sorted(queries))
@@ -752,9 +769,9 @@ class Command_Clustermap1(CommandLinePlugin):
             print(f"forcing values to 0 / 1")
 
         for row in rows:
-            q = row['query_name']
+            q = row["query_name"]
             qi = query_d[q]
-            m = row['match_name']
+            m = row["match_name"]
             mi = against_d[m]
             value = float(row[colname])
             if make_bool:
@@ -766,12 +783,16 @@ class Command_Clustermap1(CommandLinePlugin):
         row_category_map = None
         row_colors = None
         if args.row_categories_csv:
-            row_category_map, row_colors = load_categories_csv_for_labels(args.row_categories_csv, query_d.items())
+            row_category_map, row_colors = load_categories_csv_for_labels(
+                args.row_categories_csv, query_d.items()
+            )
 
         col_category_map = None
         col_colors = None
         if args.col_categories_csv:
-            col_category_map, col_colors = load_categories_csv_for_labels(args.col_categories_csv, against_d.items())
+            col_category_map, col_colors = load_categories_csv_for_labels(
+                args.col_categories_csv, against_d.items()
+            )
 
         # turn into dissimilarity matrix
         # plot!
@@ -782,8 +803,8 @@ class Command_Clustermap1(CommandLinePlugin):
             vmax=args.vmax,
             col_colors=col_colors,
             row_colors=row_colors,
-            yticklabels=[ q.split()[0] for q, _ in query_d_items ],
-            xticklabels=[ a.split()[0] for a, _ in against_d_items ],
+            yticklabels=[q.split()[0] for q, _ in query_d_items],
+            xticklabels=[a.split()[0] for a, _ in against_d_items],
             cmap="flare",
         )
 
@@ -791,14 +812,18 @@ class Command_Clustermap1(CommandLinePlugin):
             # create a custom legend of just the categories
             legend_elements = []
             for k, v in col_category_map.items():
-                legend_elements.append(Line2D([0], [0], color=v, label=k, marker="o", lw=0))
+                legend_elements.append(
+                    Line2D([0], [0], color=v, label=k, marker="o", lw=0)
+                )
             fig.ax_col_dendrogram.legend(handles=legend_elements)
 
         if row_colors and row_category_map:
             # create a custom legend of just the categories
             legend_elements = []
             for k, v in row_category_map.items():
-                legend_elements.append(Line2D([0], [0], color=v, label=k, marker="o", lw=0))
+                legend_elements.append(
+                    Line2D([0], [0], color=v, label=k, marker="o", lw=0)
+                )
             fig.ax_row_dendrogram.legend(handles=legend_elements)
 
         fig.savefig(args.output_figure, bbox_inches="tight")
