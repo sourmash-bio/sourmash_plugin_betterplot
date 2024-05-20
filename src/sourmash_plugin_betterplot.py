@@ -25,10 +25,10 @@ from sourmash.logging import debug_literal, error, notify, print_results
 from sourmash.plugins import CommandLinePlugin
 
 
-###
-
+### utility functions
 
 def load_labelinfo_csv(filename):
+    "Load file output by 'sourmash compare --labels-to'"
     with sourmash_args.FileInputCSV(filename) as r:
         labelinfo = list(r)
 
@@ -37,12 +37,15 @@ def load_labelinfo_csv(filename):
 
 
 def load_categories_csv(filename, labelinfo):
+    "Load categories file, integrate with labelinfo => colors"
     with sourmash_args.FileInputCSV(filename) as r:
         categories = list(r)
 
     category_map = {}
     colors = None
     if categories:
+        # first, figure out which column is matching between labelinfo
+        # and categories file.
         assert labelinfo
         keys = set(categories[0].keys())
         keys -= {"category"}
@@ -54,19 +57,27 @@ def load_categories_csv(filename, labelinfo):
                 key = k
                 break
 
-        if key:
-            category_values = list(set([row["category"] for row in categories]))
-            category_values.sort()
+        # found one? awesome. load in all the categories & assign colors.
 
+        if key:
+            # get distinct categories
+            category_values = set([row["category"] for row in categories])
+            category_values = list(sorted(category_values))
+
+            # map to colormap colors
             cat_colors = list(map(plt.cm.tab10, range(len(category_values))))
+
+            # build map of category => color
             category_map = {}
             for v, color in zip(category_values, cat_colors):
                 category_map[v] = color
 
+            # build map of key => color
             category_map2 = {}
             for row in categories:
                 category_map2[row[key]] = category_map[row["category"]]
 
+            # build list of colors
             colors = []
             for row in labelinfo:
                 value = row[key]
@@ -82,7 +93,7 @@ def load_categories_csv(filename, labelinfo):
 
 
 def load_categories_csv_for_labels(filename, queries):
-    "Load a categories CSV that must use label name."
+    "Load a categories CSV that uses the 'label' column."
     with sourmash_args.FileInputCSV(filename) as r:
         categories = list(r)
 
@@ -91,20 +102,24 @@ def load_categories_csv_for_labels(filename, queries):
     if categories:
         key = "label"
 
+        # load distinct categories
         category_values = list(set([row["category"] for row in categories]))
         category_values.sort()
 
+        # map categories to color
         cat_colors = list(map(plt.cm.tab10, range(len(category_values))))
         category_map = {}
         for v, color in zip(category_values, cat_colors):
             category_map[v] = color
 
+        # map label to color
         category_map2 = {}
         for row in categories:
             label = row[key]
             cat = row["category"]
             category_map2[label] = category_map[cat]
 
+        # build list of colors
         colors = []
         for label, idx in queries:
             color = category_map2[label]
@@ -116,9 +131,8 @@ def load_categories_csv_for_labels(filename, queries):
 
 
 #
-# CLI plugin - supports 'sourmash scripts plot2'
+# CLI plugin code
 #
-
 
 class Command_Plot2(CommandLinePlugin):
     command = "plot2"  # 'scripts <command>'
