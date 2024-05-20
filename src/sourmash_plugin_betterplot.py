@@ -261,11 +261,12 @@ def plot_composite_matrix(
         no_labels=not show_labels,
         get_leaves=True,
     )
-    # ax1.set_xticks([])
 
+    # draw cut point
     if cut_point is not None:
         ax1.axvline(x=cut_point, c="red", linestyle="dashed")
 
+    # draw matrix
     xstart = 0.45
     width = 0.45
     if not show_labels:
@@ -552,7 +553,7 @@ class Command_MDS2(CommandLinePlugin):
         plt.savefig(args.output_figure)
 
 
-# @CTB unused again...
+# @CTB unused code for sparse matrix foo. Revisit!
 def create_sparse_dissimilarity_matrix(tuples, num_objects):
     # Initialize matrix in LIL format for efficient setup
     similarity_matrix = lil_matrix((num_objects, num_objects))
