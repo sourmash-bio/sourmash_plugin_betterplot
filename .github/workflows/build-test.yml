@@ -47,4 +47,4 @@ jobs:
 
     - name: build examples
       shell: bash -l {0}
-      run: make examples
+      run: make cleanrun
