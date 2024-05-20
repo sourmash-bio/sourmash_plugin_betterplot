@@ -441,7 +441,6 @@ class Command_PairwiseToCompare(CommandLinePlugin):
 
         mat = numpy.zeros((len(queries), len(queries)))
 
-        pairs = []
         for row in rows:
             # get unique indices for each query/match pair.
             q = row['query_name']
@@ -510,7 +509,6 @@ class Command_MDS2(CommandLinePlugin):
 
         mat = numpy.zeros((len(queries), len(queries)))
 
-        pairs = []
         for row in rows:
             # get unique indices for each query/match pair.
             q = row['query_name']
@@ -676,6 +674,132 @@ class Command_Plot3(CommandLinePlugin):
 
         # turn off column dendrogram
         fig.ax_row_dendrogram.set_visible(False)
+
+        fig.savefig(args.output_figure, bbox_inches="tight")
+        notify(f"wrote plot to: {args.output_figure}")
+
+
+class Command_Clustermap1(CommandLinePlugin):
+    command = "clustermap1"  # 'scripts <command>'
+    description = "plot the results of 'manysearch'"  # output with -h
+    usage = "sourmash scripts clustermap1 <manysearch_csv> -o <output.png>"  # output with no args/bad args as well as -h
+    epilog = epilog  # output with -h
+    formatter_class = argparse.RawTextHelpFormatter  # do not reformat multiline
+
+    def __init__(self, subparser):
+        super().__init__(subparser)
+        subparser.add_argument("manysearch_csv", help='output from "sourmash compare"')
+
+        subparser.add_argument(
+            "--vmin",
+            default=0.0,
+            type=float,
+            help="lower limit of heatmap scale; default=%(default)f",
+        )
+        subparser.add_argument(
+            "--vmax",
+            default=1.0,
+            type=float,
+            help="upper limit of heatmap scale; default=%(default)f",
+        )
+        subparser.add_argument("--figsize-x", type=int, default=11)
+        subparser.add_argument("--figsize-y", type=int, default=8)
+        subparser.add_argument(
+            "-o", "--output-figure", help="output figure to this file", required=True
+        )
+        subparser.add_argument(
+            "-R", "--row-categories-csv", help="CSV mapping labels @CTB query or against? to categories"
+        )
+        subparser.add_argument(
+            "-C", "--col-categories-csv", help="CSV mapping labels @CTB query or against? to categories"
+        )
+        subparser.add_argument('-u', '--use-column', default='jaccard',
+                               help='column name to use in matrix (default: jaccard)')
+        subparser.add_argument('--boolean', action='store_true',
+                               help='convert values into 0/1')
+
+    def main(self, args):
+        super().main(args)
+        with sourmash_args.FileInputCSV(args.manysearch_csv) as r:
+            rows = list(r)
+
+        # pick out all the distinct queries/matches.
+        print(f"loaded {len(rows)} rows from '{args.manysearch_csv}'")
+        queries = set( [ row['query_name'] for row in rows ] )
+        against = set( [ row['match_name'] for row in rows ] )
+        print(f"loaded {len(queries)} x {len(against)} total elements")
+
+        queries = list(sorted(queries))
+        against = list(sorted(against))
+
+        query_d = {}
+        for n, query_name in enumerate(queries):
+            query_d[query_name] = n
+
+        against_d = {}
+        for n, against_name in enumerate(against):
+            against_d[against_name] = n
+
+        query_d_items = list(sorted(query_d.items(), key=lambda x: x[1]))
+        against_d_items = list(sorted(against_d.items(), key=lambda x: x[1]))
+
+        mat = numpy.zeros((len(queries), len(against)))
+
+        colname = args.use_column
+        print(f"using column '{colname}'")
+        make_bool = args.boolean
+        if make_bool:
+            print(f"forcing values to 0 / 1")
+
+        for row in rows:
+            q = row['query_name']
+            qi = query_d[q]
+            m = row['match_name']
+            mi = against_d[m]
+            value = float(row[colname])
+            if make_bool:
+                value = 1 if value else 0
+
+            mat[qi, mi] = value
+
+        # load categories?
+        row_category_map = None
+        row_colors = None
+        if args.row_categories_csv:
+            row_category_map, row_colors = load_categories_csv_for_labels(args.row_categories_csv, query_d.items())
+
+        col_category_map = None
+        col_colors = None
+        if args.col_categories_csv:
+            col_category_map, col_colors = load_categories_csv_for_labels(args.col_categories_csv, against_d.items())
+
+        # turn into dissimilarity matrix
+        # plot!
+        fig = sns.clustermap(
+            mat,
+            figsize=(args.figsize_x, args.figsize_y),
+            vmin=args.vmin,
+            vmax=args.vmax,
+            col_colors=col_colors,
+            row_colors=row_colors,
+            yticklabels=[ q.split()[0] for q, _ in query_d_items ],
+            xticklabels=[ a.split()[0] for a, _ in against_d_items ],
+            cmap="flare",
+        )
+
+        if col_colors and col_category_map:
+            # create a custom legend of just the categories
+            legend_elements = []
+            for k, v in col_category_map.items():
+                legend_elements.append(Line2D([0], [0], color=v, label=k, marker="o", lw=0))
+            fig.ax_col_dendrogram.legend(handles=legend_elements)
+
+        if row_colors and row_category_map:
+            # create a custom legend of just the categories
+            legend_elements = []
+            for k, v in row_category_map.items():
+                legend_elements.append(Line2D([0], [0], color=v, label=k, marker="o", lw=0))
+            fig.ax_row_dendrogram.legend(handles=legend_elements)
 
         fig.savefig(args.output_figure, bbox_inches="tight")
         notify(f"wrote plot to: {args.output_figure}")

@@ -11,6 +11,7 @@ rule all:
         "mds2.10sketches.cmp.png",
         "plot2.pairwise.10sketches.cmp.png",
         "plot3.10sketches.cmp.png",
+        "clustermap1.10sketches.png",
 
 rule cmp_3sketches:
     input:
@@ -158,4 +159,25 @@ rule plot3_10sketches:
     shell: """
         sourmash scripts plot3 {input.cmp} {input.labels} -o {output} \
             -C {input.categories}
+    """
+
+rule r10sketches_manysearch:
+    input:
+        query="10sketches.sig.zip",
+        against ="sketches/shew21.sig.zip",
+    output:
+        cmp="10sketches.manysearch.csv",
+    shell: """
+        sourmash scripts manysearch {input.query} {input.against} -o {output}
+    """
+
+rule clustermap1_10sketches:
+    input:
+        cmp="10sketches.manysearch.csv",
+        categories="10sketches-categories.csv",
+    output:
+        "clustermap1.10sketches.png",
+    shell: """
+        sourmash scripts clustermap1 {input.cmp} -o {output} \
+            -u containment -R {input.categories}
     """
