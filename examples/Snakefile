@@ -164,7 +164,7 @@ rule plot3_10sketches:
 rule r10sketches_manysearch:
     input:
         query="10sketches.sig.zip",
-        against ="10sketches.sig.zip",
+        against ="sketches/shew21.sig.zip",
     output:
         cmp="10sketches.manysearch.csv",
     shell: """
@@ -179,5 +179,5 @@ rule clustermap1_10sketches:
         "clustermap1.10sketches.png",
     shell: """
         sourmash scripts clustermap1 {input.cmp} -o {output} \
-            -u containment -R {input.categories} -C {input.categories}
+            -u containment -R {input.categories}
     """
