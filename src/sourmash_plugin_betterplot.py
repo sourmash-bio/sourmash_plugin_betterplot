@@ -794,7 +794,7 @@ class Command_Clustermap1(CommandLinePlugin):
         print(f"using column '{colname}'")
         make_bool = args.boolean
         if make_bool:
-            print(f"forcing values to 0 / 1 and disabling color barbecause of --boolean")
+            print(f"forcing values to 0 / 1 and disabling color bar because of --boolean")
 
         for row in rows:
             q = row["query_name"]
@@ -842,8 +842,8 @@ class Command_Clustermap1(CommandLinePlugin):
             vmax=args.vmax,
             col_colors=col_colors,
             row_colors=row_colors,
-            yticklabels=xticklabels,
-            xticklabels=yticklabels,
+            xticklabels=xticklabels,
+            yticklabels=yticklabels,
             cmap="flare",
             **kw_args
         )
