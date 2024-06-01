@@ -3,7 +3,7 @@ name = "sourmash_plugin_betterplot"
 description = "sourmash plugin for improved plotting/viz and cluster examination."
 readme = "README.md"
 requires-python = ">=3.10"
-version = "0.3.2"
+version = "0.3.3"
 
 dependencies = ["sourmash>=4.8.8,<5",
                 "matplotlib", "numpy", "scipy", "scikit-learn", "seaborn"]
