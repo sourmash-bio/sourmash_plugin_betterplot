@@ -634,6 +634,10 @@ class Command_Plot3(CommandLinePlugin):
         subparser.add_argument(
             "-C", "--categories-csv", help="CSV mapping label columns to categories"
         )
+        subparser.add_argument(
+            "--no-labels", action="store_true",
+            help="disable X & Y axis labels"
+        )
 
     def main(self, args):
         super().main(args)
@@ -674,6 +678,11 @@ class Command_Plot3(CommandLinePlugin):
         # numpy.fill_diagonal(dissim, 1)
         dissim = D
 
+        if args.no_labels:
+            yticklabels=[]
+        else:
+            yticklabels=[x["label"].split(" ")[0] for x in labelinfo],
+
         # plot!
         fig = sns.clustermap(
             dissim,
@@ -681,7 +690,7 @@ class Command_Plot3(CommandLinePlugin):
             vmin=args.vmin,
             vmax=args.vmax,
             col_colors=colors,
-            yticklabels=[x["label"].split(" ")[0] for x in labelinfo],
+            yticklabels=yticklabels,
             xticklabels=[],
             cmap="flare",
         )
@@ -749,6 +758,10 @@ class Command_Clustermap1(CommandLinePlugin):
         subparser.add_argument(
             "--boolean", action="store_true", help="convert values into 0/1"
         )
+        subparser.add_argument(
+            "--no-labels", action="store_true",
+            help="disable X & Y axis labels"
+        )
 
     def main(self, args):
         super().main(args)
@@ -781,7 +794,7 @@ class Command_Clustermap1(CommandLinePlugin):
         print(f"using column '{colname}'")
         make_bool = args.boolean
         if make_bool:
-            print(f"forcing values to 0 / 1")
+            print(f"forcing values to 0 / 1 and disabling color barbecause of --boolean")
 
         for row in rows:
             q = row["query_name"]
@@ -809,6 +822,17 @@ class Command_Clustermap1(CommandLinePlugin):
                 args.col_categories_csv, against_d.items()
             )
 
+        kw_args = {}
+        if args.boolean:        # turn off colorbar if boolean.
+            kw_args['cbar_pos'] = None
+
+        if args.no_labels:
+            xticklabels=[]
+            yticklabels=[]
+        else:
+            yticklabels=[q.split()[0] for q, _ in query_d_items],
+            xticklabels=[a.split()[0] for a, _ in against_d_items],
+
         # turn into dissimilarity matrix
         # plot!
         fig = sns.clustermap(
@@ -818,9 +842,10 @@ class Command_Clustermap1(CommandLinePlugin):
             vmax=args.vmax,
             col_colors=col_colors,
             row_colors=row_colors,
-            yticklabels=[q.split()[0] for q, _ in query_d_items],
-            xticklabels=[a.split()[0] for a, _ in against_d_items],
+            yticklabels=xticklabels,
+            xticklabels=yticklabels,
             cmap="flare",
+            **kw_args
         )
 
         if col_colors and col_category_map:
