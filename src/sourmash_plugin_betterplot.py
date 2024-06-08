@@ -152,6 +152,27 @@ def manysearch_rows_to_index(rows, *, column_name='query_name'):
     return sample_d
 
 
+def labelinfo_to_idents(labelinfo):
+    "Make x/yticklabels from a list of labelinfo rows"
+    xx = []
+    for row in labelinfo:
+        ident = row["label"].split(' ')
+        ident = ident[0]
+        xx.append(ident)
+
+    return xx
+
+
+def sample_d_to_idents(sample_d):
+    "Make x/yticklabels from a list of (k, v) from sample_d.items()."
+    xx = []
+    for k, v in sample_d:
+        ident = k.split(' ')
+        ident = ident[0]
+        xx.append(ident)
+
+    return xx
+
 #
 # CLI plugin code
 #
@@ -682,10 +703,9 @@ class Command_Plot3(CommandLinePlugin):
         if args.no_labels:
             yticklabels=[]
         else:
-            yticklabels=[x["label"].split(" ")[0] for x in labelinfo]
+            yticklabels=labelinfo_to_idents(labelinfo)
 
         # plot!
-        print('XXX', yticklabels)
         fig = sns.clustermap(
             dissim,
             figsize=(args.figsize_x, args.figsize_y),
@@ -823,8 +843,8 @@ class Command_Clustermap1(CommandLinePlugin):
             xticklabels=[]
             yticklabels=[]
         else:
-            yticklabels=[q.split()[0] for q, _ in query_d_items]
-            xticklabels=[a.split()[0] for a, _ in against_d_items]
+            yticklabels=sample_d_to_idents(query_d_items)
+            xticklabels=sample_d_to_idents(against_d_items)
 
         # turn into dissimilarity matrix
         # plot!
