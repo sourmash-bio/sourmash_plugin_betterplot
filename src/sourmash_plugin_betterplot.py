@@ -140,7 +140,7 @@ def manysearch_rows_to_index(rows, *, column_name='query_name'):
     elif column_name == 'both':
         samples = set()
         for col in ('query_name', 'match_name'):
-            samples.union_update(( row[col] for row in rows ))
+            samples.update(( row[col] for row in rows ))
     else:
         raise ValueError(f"unknown column_name '{column_name}'")
 
@@ -464,21 +464,9 @@ class Command_PairwiseToCompare(CommandLinePlugin):
         with sourmash_args.FileInputCSV(args.pairwise_csv) as r:
             rows = list(r)
 
-        # pick out all the distinct queries/matches.
-        print(f"loaded {len(rows)} rows from '{args.pairwise_csv}'")
-        queries = set([row["query_name"] for row in rows])
-        queries.update(set([row["match_name"] for row in rows]))
-        print(f"loaded {len(queries)} total elements")
+        sample_d = manysearch_rows_to_index(rows)
 
-        queries = list(sorted(queries))
-
-        sample_d = {}
-        for n, sample_name in enumerate(queries):
-            sample_d[sample_name] = n
-
-        assert n == len(queries) - 1
-
-        mat = numpy.zeros((len(queries), len(queries)))
+        mat = numpy.zeros((len(sample_d), len(sample_d)))
 
         for row in rows:
             # get unique indices for each query/match pair.
@@ -534,19 +522,10 @@ class Command_MDS2(CommandLinePlugin):
 
         # pick out all the distinct queries/matches.
         print(f"loaded {len(rows)} rows from '{args.pairwise_csv}'")
-        queries = set([row["query_name"] for row in rows])
-        queries.update(set([row["match_name"] for row in rows]))
-        print(f"loaded {len(queries)} total elements")
+        sample_d = manysearch_rows_to_index(rows, column_name='both')
+        print(f"loaded {len(sample_d)} total elements")
 
-        queries = list(sorted(queries))
-
-        sample_d = {}
-        for n, sample_name in enumerate(queries):
-            sample_d[sample_name] = n
-
-        assert n == len(queries) - 1
-
-        mat = numpy.zeros((len(queries), len(queries)))
+        mat = numpy.zeros((len(sample_d), len(sample_d)))
 
         for row in rows:
             # get unique indices for each query/match pair.
@@ -792,25 +771,16 @@ class Command_Clustermap1(CommandLinePlugin):
 
         # pick out all the distinct queries/matches.
         print(f"loaded {len(rows)} rows from '{args.manysearch_csv}'")
-        queries = set([row["query_name"] for row in rows])
-        against = set([row["match_name"] for row in rows])
-        print(f"loaded {len(queries)} x {len(against)} total elements")
 
-        queries = list(sorted(queries))
-        against = list(sorted(against))
+        query_d = manysearch_rows_to_index(rows, column_name='query_name')
+        against_d = manysearch_rows_to_index(rows, column_name='match_name')
 
-        query_d = {}
-        for n, query_name in enumerate(queries):
-            query_d[query_name] = n
-
-        against_d = {}
-        for n, against_name in enumerate(against):
-            against_d[against_name] = n
+        print(f"loaded {len(query_d)} x {len(against_d)} total elements")
 
         query_d_items = list(sorted(query_d.items(), key=lambda x: x[1]))
         against_d_items = list(sorted(against_d.items(), key=lambda x: x[1]))
 
-        mat = numpy.zeros((len(queries), len(against)))
+        mat = numpy.zeros((len(query_d), len(against_d)))
 
         colname = args.use_column
         print(f"using column '{colname}'")
