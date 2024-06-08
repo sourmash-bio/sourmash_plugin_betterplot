@@ -45,6 +45,10 @@ jobs:
       shell: bash -l {0}
       run: pip install .
 
+    - name: run python tests
+      shell: bash -l {0}
+      run: make test
+
     - name: build examples
       shell: bash -l {0}
-      run: make cleanrun
+      run: make cleanall

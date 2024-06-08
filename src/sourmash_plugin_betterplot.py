@@ -41,13 +41,15 @@ def load_categories_csv(filename, labelinfo):
     with sourmash_args.FileInputCSV(filename) as r:
         categories = list(r)
 
-    category_map = {}
+    category_to_color = {}
     colors = None
     if categories:
         # first, figure out which column is matching between labelinfo
         # and categories file.
         assert labelinfo
         keys = set(categories[0].keys())
+        if "category" not in keys:
+            raise ValueError(f"no 'category' column found in keys: only {keys}")
         keys -= {"category"}
 
         key = None
@@ -64,40 +66,50 @@ def load_categories_csv(filename, labelinfo):
             category_values = set([row["category"] for row in categories])
             category_values = list(sorted(category_values))
 
-            # map to colormap colors
+            # map categories to colormap colors
             cat_colors = list(map(plt.cm.tab10, range(len(category_values))))
 
             # build map of category => color
-            category_map = {}
+            category_to_color = {}
             for v, color in zip(category_values, cat_colors):
-                category_map[v] = color
+                category_to_color[v] = color
 
             # build map of key => color
-            category_map2 = {}
+            label_to_color = {}
             for row in categories:
-                category_map2[row[key]] = category_map[row["category"]]
+                value = row[key]
+                category = row["category"]
+                color = category_to_color[category]
+                label_to_color[value] = color
 
-            # build list of colors
+            # build list of colors in sample order
             colors = []
+            missing_values = []
             for row in labelinfo:
                 value = row[key]
-                color = category_map2[value]
+                if value not in label_to_color:
+                    missing_values.append(value)
+                    continue
+                color = label_to_color[value]
                 colors.append(color)
+
+            if missing_values:
+                raise ValueError(f"values {missing_values} are missing in categories file")
 
         else:
             notify(f"no valid key column found in categories file '{filename}'.")
     else:
         notify(f"nothing in categories file '{filename}'?!")
 
-    return category_map, colors
+    return category_to_color, colors
 
 
-def load_categories_csv_for_labels(filename, queries):
+def load_categories_csv_for_labels(filename, samples_d):
     "Load a categories CSV that uses the 'label' column."
     with sourmash_args.FileInputCSV(filename) as r:
         categories = list(r)
 
-    category_map = {}
+    category_to_color = {}
     colors = None
     if categories:
         key = "label"
@@ -108,27 +120,70 @@ def load_categories_csv_for_labels(filename, queries):
 
         # map categories to color
         cat_colors = list(map(plt.cm.tab10, range(len(category_values))))
-        category_map = {}
+        category_to_color = {}
         for v, color in zip(category_values, cat_colors):
-            category_map[v] = color
+            category_to_color[v] = color
 
         # map label to color
-        category_map2 = {}
+        label_to_color = {}
         for row in categories:
             label = row[key]
             cat = row["category"]
-            category_map2[label] = category_map[cat]
+            label_to_color[label] = category_to_color[cat]
 
         # build list of colors
         colors = []
-        for label, idx in queries:
-            color = category_map2[label]
+        for label, idx in samples_d.items():
+            color = label_to_color[label]
             colors.append(color)
     else:
         notify(f"nothing in categories file '{filename}'?!")
 
-    return category_map, colors
+    return category_to_color, colors
 
+
+def manysearch_rows_to_index(rows, *, column_name='query_name'):
+    """Extract # of samples and build name -> sample_index map from manysearch.
+
+    Note, column names are "query_name", "match_name", or "both".
+    """
+    if column_name in ('query_name', 'match_name'):
+        samples = set(( row[column_name] for row in rows ))
+    elif column_name == 'both':
+        samples = set()
+        for col in ('query_name', 'match_name'):
+            samples.update(( row[col] for row in rows ))
+    else:
+        raise ValueError(f"unknown column_name '{column_name}'")
+
+    samples = list(sorted(samples))
+    sample_d = {}
+    for n, sample_name in enumerate(samples):
+        sample_d[sample_name] = n
+
+    return sample_d
+
+
+def labelinfo_to_idents(labelinfo):
+    "Make x/yticklabels from a list of labelinfo rows"
+    xx = []
+    for row in labelinfo:
+        ident = row["label"].split(' ')
+        ident = ident[0]
+        xx.append(ident)
+
+    return xx
+
+
+def sample_d_to_idents(sample_d):
+    "Make x/yticklabels from a list of (k, v) from sample_d.items()."
+    xx = []
+    for k, v in sample_d:
+        ident = k.split(' ')
+        ident = ident[0]
+        xx.append(ident)
+
+    return xx
 
 #
 # CLI plugin code
@@ -442,21 +497,9 @@ class Command_PairwiseToCompare(CommandLinePlugin):
         with sourmash_args.FileInputCSV(args.pairwise_csv) as r:
             rows = list(r)
 
-        # pick out all the distinct queries/matches.
-        print(f"loaded {len(rows)} rows from '{args.pairwise_csv}'")
-        queries = set([row["query_name"] for row in rows])
-        queries.update(set([row["match_name"] for row in rows]))
-        print(f"loaded {len(queries)} total elements")
+        sample_d = manysearch_rows_to_index(rows)
 
-        queries = list(sorted(queries))
-
-        sample_d = {}
-        for n, sample_name in enumerate(queries):
-            sample_d[sample_name] = n
-
-        assert n == len(queries) - 1
-
-        mat = numpy.zeros((len(queries), len(queries)))
+        mat = numpy.zeros((len(sample_d), len(sample_d)))
 
         for row in rows:
             # get unique indices for each query/match pair.
@@ -512,19 +555,10 @@ class Command_MDS2(CommandLinePlugin):
 
         # pick out all the distinct queries/matches.
         print(f"loaded {len(rows)} rows from '{args.pairwise_csv}'")
-        queries = set([row["query_name"] for row in rows])
-        queries.update(set([row["match_name"] for row in rows]))
-        print(f"loaded {len(queries)} total elements")
+        sample_d = manysearch_rows_to_index(rows, column_name='both')
+        print(f"loaded {len(sample_d)} total elements")
 
-        queries = list(sorted(queries))
-
-        sample_d = {}
-        for n, sample_name in enumerate(queries):
-            sample_d[sample_name] = n
-
-        assert n == len(queries) - 1
-
-        mat = numpy.zeros((len(queries), len(queries)))
+        mat = numpy.zeros((len(sample_d), len(sample_d)))
 
         for row in rows:
             # get unique indices for each query/match pair.
@@ -544,7 +578,7 @@ class Command_MDS2(CommandLinePlugin):
         colors = None
         if args.categories_csv:
             category_map, colors = load_categories_csv_for_labels(
-                args.categories_csv, sample_d.items()
+                args.categories_csv, sample_d
             )
 
         dissim = 1 - mat
@@ -681,7 +715,7 @@ class Command_Plot3(CommandLinePlugin):
         if args.no_labels:
             yticklabels=[]
         else:
-            yticklabels=[x["label"].split(" ")[0] for x in labelinfo],
+            yticklabels=labelinfo_to_idents(labelinfo)
 
         # plot!
         fig = sns.clustermap(
@@ -770,25 +804,16 @@ class Command_Clustermap1(CommandLinePlugin):
 
         # pick out all the distinct queries/matches.
         print(f"loaded {len(rows)} rows from '{args.manysearch_csv}'")
-        queries = set([row["query_name"] for row in rows])
-        against = set([row["match_name"] for row in rows])
-        print(f"loaded {len(queries)} x {len(against)} total elements")
 
-        queries = list(sorted(queries))
-        against = list(sorted(against))
+        query_d = manysearch_rows_to_index(rows, column_name='query_name')
+        against_d = manysearch_rows_to_index(rows, column_name='match_name')
 
-        query_d = {}
-        for n, query_name in enumerate(queries):
-            query_d[query_name] = n
-
-        against_d = {}
-        for n, against_name in enumerate(against):
-            against_d[against_name] = n
+        print(f"loaded {len(query_d)} x {len(against_d)} total elements")
 
         query_d_items = list(sorted(query_d.items(), key=lambda x: x[1]))
         against_d_items = list(sorted(against_d.items(), key=lambda x: x[1]))
 
-        mat = numpy.zeros((len(queries), len(against)))
+        mat = numpy.zeros((len(query_d), len(against_d)))
 
         colname = args.use_column
         print(f"using column '{colname}'")
@@ -812,14 +837,14 @@ class Command_Clustermap1(CommandLinePlugin):
         row_colors = None
         if args.row_categories_csv:
             row_category_map, row_colors = load_categories_csv_for_labels(
-                args.row_categories_csv, query_d.items()
+                args.row_categories_csv, query_d
             )
 
         col_category_map = None
         col_colors = None
         if args.col_categories_csv:
             col_category_map, col_colors = load_categories_csv_for_labels(
-                args.col_categories_csv, against_d.items()
+                args.col_categories_csv, against_d
             )
 
         kw_args = {}
@@ -830,8 +855,8 @@ class Command_Clustermap1(CommandLinePlugin):
             xticklabels=[]
             yticklabels=[]
         else:
-            yticklabels=[q.split()[0] for q, _ in query_d_items],
-            xticklabels=[a.split()[0] for a, _ in against_d_items],
+            yticklabels=sample_d_to_idents(query_d_items)
+            xticklabels=sample_d_to_idents(against_d_items)
 
         # turn into dissimilarity matrix
         # plot!

@@ -1,0 +1,11 @@
+sort_order,md5,label,name,filename,signature_file
+1,f3a90d4e5528864a5bcc8434b0d0c3b1,"CP001071.1 Akkermansia muciniphila ATCC BAA-835, complete genome","CP001071.1 Akkermansia muciniphila ATCC BAA-835, complete genome",2.fa,sketches/2.sig.zip
+2,09a08691ce52952152f0e866a59f6261,"NC_009665.1 Shewanella baltica OS185, complete genome","NC_009665.1 Shewanella baltica OS185, complete genome",47.fa,sketches/47.sig.zip
+3,a30b11dbb40d8a88d56861b05c0a92a8,"NC_010730.1 Sulfurihydrogenibium sp. YO3AOP1, complete genome","NC_010730.1 Sulfurihydrogenibium sp. YO3AOP1, complete genome",48.fa,sketches/48.sig.zip
+4,ea1af81ce1042a3aaa59f860b8a39573,"NZ_ABZS01000228.1 Sulfurihydrogenibium yellowstonense SS-5 gcontig_18, whole genome shotgun sequence","NZ_ABZS01000228.1 Sulfurihydrogenibium yellowstonense SS-5 gcontig_18, whole genome shotgun sequence",49.fa,sketches/49.sig.zip
+5,1d815f5d470aaafbbca434a2c84f7dc1,"CP000916.1 Thermotoga neapolitana DSM 4359, complete genome","CP000916.1 Thermotoga neapolitana DSM 4359, complete genome",51.fa,sketches/51.sig.zip
+6,745322649f94665adf60b2ee985746ca,"CP000702.1 Thermotoga petrophila RKU-1, complete genome","CP000702.1 Thermotoga petrophila RKU-1, complete genome",52.fa,sketches/52.sig.zip
+7,411679f88e1e2e6c7c70fbdc45cb3116,"CP000969.1 Thermotoga sp. RQ2, complete genome","CP000969.1 Thermotoga sp. RQ2, complete genome",53.fa,sketches/53.sig.zip
+8,272eda69da90813c8c2e841e0555e5b0,"NZ_CH959311.1 Sulfitobacter sp. EE-36 scf_1099451318005, whole genome shotgun sequence","NZ_CH959311.1 Sulfitobacter sp. EE-36 scf_1099451318005, whole genome shotgun sequence",59.fa,sketches/59.sig.zip
+9,5f3cd303f3759ada3b1da0fe9f63c1f8,"NZ_CH959317.1 Sulfitobacter sp. NAS-14.1 scf_1099451320472, whole genome shotgun sequence","NZ_CH959317.1 Sulfitobacter sp. NAS-14.1 scf_1099451320472, whole genome shotgun sequence",60.fa,sketches/60.sig.zip
+10,38729c6374925585db28916b82a6f513,"NC_011663.1 Shewanella baltica OS223, complete genome","NC_011663.1 Shewanella baltica OS223, complete genome",63.fa,sketches/63.sig.zip

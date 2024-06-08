@@ -14,7 +14,7 @@ install:
 examples:
 	cd examples && make
 
-cleanrun:
+cleanall:
 	cd examples && make cleanall
 
 dist:
