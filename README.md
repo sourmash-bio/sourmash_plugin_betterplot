@@ -40,7 +40,57 @@ pip install sourmash_plugin_betterplot
 
 ## Usage
 
-See the examples below.
+See the examples below for some example command lines and output,
+and use command-line help (`-h/--help`) to see available options.
+
+### Labels on plots: the `labels-to` CSV file.
+
+The `labels-to` CSV file taken by most (all?) of the comparison matrix
+plotting functions (e.g. `plot2`, `plot3`, `mds`) is the same format
+output by
+[`sourmash compare ... --labels-to <file>`](https://sourmash.readthedocs.io/en/latest/command-line.html#sourmash-compare-compare-many-signatures)
+and loaded by `sourmash plot --labels-from <file>`. The format is
+hopefully obvious, but there are a few things to mention -
+
+* the `sort_order` column specifies the order of the columns with respect
+  to the samples in the distance matrix.  This is there to support arbitrary
+  re-arranging and processing of the CSV file.
+* the `label` column is the name that will be displayed on the plot, as well as
+  for the default "categories" CSV matching (see below). You can edit this
+  by hand (spreadsheet, text editor) or programmatically.
+* as a side note, the `labels.txt` file output by `sourmash compare`
+  is entirely ignored ;).
+
+### Categories on plots: the "categories" CSV file
+
+One of the nice features of the betterplot functions is the ability to
+provide categories that color the plots. This is critical for some
+plots - for example, the `mds` and `mds2` plots don't make much sense
+without colors! - and nice for other plots, like `plot3` and
+`clustermap1`, where you can color columns/rows by category.
+
+To make use of this feature, you need to provide a "categories" CSV
+file (typically `-C/--categories-csv`). This file is reasonably flexible
+in format; it must contain at least two columns, one named `category`,
+but can contain more as long as `category` is provided.
+
+The simplest possible categories CSV format is shown in
+[10sketches-categories.csv](examples/10sketches-categories.csv), and
+it contains two columns, `label` and `category`.  When this file is
+loaded, `label` is matched to the name of each point/row/column, and
+that point is then assigned that category.
+
+Additional flexibility is provided by the column matching.
+
+Some restrictions of / observations on the current implementation:
+* if a categories CSV is provided, every point must have an
+  associated category.
+* there is currently no way to specify a specific color for a
+  category; they get assigned at random.
+* it is entirely OK to edit the labels file (see above) and just add
+  a `category` column. This won't be picked up by the
+  code automatically - you'll need to specify the same file via `-C` -
+  but it works fine!
 
 ## Examples
 

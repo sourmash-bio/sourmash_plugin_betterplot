@@ -92,7 +92,7 @@ def load_categories_csv(filename, labelinfo):
     return category_map, colors
 
 
-def load_categories_csv_for_labels(filename, queries):
+def load_categories_csv_for_labels(filename, samples_d):
     "Load a categories CSV that uses the 'label' column."
     with sourmash_args.FileInputCSV(filename) as r:
         categories = list(r)
@@ -121,13 +121,35 @@ def load_categories_csv_for_labels(filename, queries):
 
         # build list of colors
         colors = []
-        for label, idx in queries:
+        for label, idx in samples_d.items():
             color = category_map2[label]
             colors.append(color)
     else:
         notify(f"nothing in categories file '{filename}'?!")
 
     return category_map, colors
+
+
+def manysearch_rows_to_index(rows, *, column_name='query_name'):
+    """Extract # of samples and build name -> sample_index map from manysearch.
+
+    Note, column names are "query_name", "match_name", or "both".
+    """
+    if column_name in ('query_name', 'match_name'):
+        samples = set(( row[column_name] for row in rows ))
+    elif column_name == 'both':
+        samples = set()
+        for col in ('query_name', 'match_name'):
+            samples.union_update(( row[col] for row in rows ))
+    else:
+        raise ValueError(f"unknown column_name '{column_name}'")
+
+    samples = list(sorted(samples))
+    sample_d = {}
+    for n, sample_name in enumerate(samples):
+        sample_d[sample_name] = n
+
+    return sample_d
 
 
 #
@@ -544,7 +566,7 @@ class Command_MDS2(CommandLinePlugin):
         colors = None
         if args.categories_csv:
             category_map, colors = load_categories_csv_for_labels(
-                args.categories_csv, sample_d.items()
+                args.categories_csv, sample_d
             )
 
         dissim = 1 - mat
@@ -812,14 +834,14 @@ class Command_Clustermap1(CommandLinePlugin):
         row_colors = None
         if args.row_categories_csv:
             row_category_map, row_colors = load_categories_csv_for_labels(
-                args.row_categories_csv, query_d.items()
+                args.row_categories_csv, query_d
             )
 
         col_category_map = None
         col_colors = None
         if args.col_categories_csv:
             col_category_map, col_colors = load_categories_csv_for_labels(
-                args.col_categories_csv, against_d.items()
+                args.col_categories_csv, against_d
             )
 
         kw_args = {}
