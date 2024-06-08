@@ -682,9 +682,10 @@ class Command_Plot3(CommandLinePlugin):
         if args.no_labels:
             yticklabels=[]
         else:
-            yticklabels=[x["label"].split(" ")[0] for x in labelinfo],
+            yticklabels=[x["label"].split(" ")[0] for x in labelinfo]
 
         # plot!
+        print('XXX', yticklabels)
         fig = sns.clustermap(
             dissim,
             figsize=(args.figsize_x, args.figsize_y),
@@ -822,8 +823,8 @@ class Command_Clustermap1(CommandLinePlugin):
             xticklabels=[]
             yticklabels=[]
         else:
-            yticklabels=[q.split()[0] for q, _ in query_d_items],
-            xticklabels=[a.split()[0] for a, _ in against_d_items],
+            yticklabels=[q.split()[0] for q, _ in query_d_items]
+            xticklabels=[a.split()[0] for a, _ in against_d_items]
 
         # turn into dissimilarity matrix
         # plot!
