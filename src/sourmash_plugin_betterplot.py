@@ -63,8 +63,6 @@ def load_categories_csv(filename, labelinfo):
 
         if key:
             # get distinct categories
-            for row in categories:
-                print('XXX', row)
             category_values = set([row["category"] for row in categories])
             category_values = list(sorted(category_values))
 
@@ -86,12 +84,17 @@ def load_categories_csv(filename, labelinfo):
 
             # build list of colors in sample order
             colors = []
+            missing_values = []
             for row in labelinfo:
                 value = row[key]
                 if value not in label_to_color:
-                    raise ValueError(f"value '{value}' not in category map")
+                    missing_values.append(value)
+                    continue
                 color = label_to_color[value]
                 colors.append(color)
+
+            if missing_values:
+                raise ValueError(f"values {missing_values} are missing in categories file")
 
         else:
             notify(f"no valid key column found in categories file '{filename}'.")
