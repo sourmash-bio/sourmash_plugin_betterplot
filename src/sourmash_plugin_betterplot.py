@@ -41,13 +41,15 @@ def load_categories_csv(filename, labelinfo):
     with sourmash_args.FileInputCSV(filename) as r:
         categories = list(r)
 
-    category_map = {}
+    category_to_color = {}
     colors = None
     if categories:
         # first, figure out which column is matching between labelinfo
         # and categories file.
         assert labelinfo
         keys = set(categories[0].keys())
+        if "category" not in keys:
+            raise ValueError(f"no 'category' column found in keys: only {keys}")
         keys -= {"category"}
 
         key = None
@@ -61,27 +63,34 @@ def load_categories_csv(filename, labelinfo):
 
         if key:
             # get distinct categories
+            for row in categories:
+                print('XXX', row)
             category_values = set([row["category"] for row in categories])
             category_values = list(sorted(category_values))
 
-            # map to colormap colors
+            # map categories to colormap colors
             cat_colors = list(map(plt.cm.tab10, range(len(category_values))))
 
             # build map of category => color
-            category_map = {}
+            category_to_color = {}
             for v, color in zip(category_values, cat_colors):
-                category_map[v] = color
+                category_to_color[v] = color
 
             # build map of key => color
-            category_map2 = {}
+            label_to_color = {}
             for row in categories:
-                category_map2[row[key]] = category_map[row["category"]]
+                value = row[key]
+                category = row["category"]
+                color = category_to_color[category]
+                label_to_color[value] = color
 
-            # build list of colors
+            # build list of colors in sample order
             colors = []
             for row in labelinfo:
                 value = row[key]
-                color = category_map2[value]
+                if value not in label_to_color:
+                    raise ValueError(f"value '{value}' not in category map")
+                color = label_to_color[value]
                 colors.append(color)
 
         else:
@@ -89,7 +98,7 @@ def load_categories_csv(filename, labelinfo):
     else:
         notify(f"nothing in categories file '{filename}'?!")
 
-    return category_map, colors
+    return category_to_color, colors
 
 
 def load_categories_csv_for_labels(filename, samples_d):
@@ -97,7 +106,7 @@ def load_categories_csv_for_labels(filename, samples_d):
     with sourmash_args.FileInputCSV(filename) as r:
         categories = list(r)
 
-    category_map = {}
+    category_to_color = {}
     colors = None
     if categories:
         key = "label"
@@ -108,26 +117,26 @@ def load_categories_csv_for_labels(filename, samples_d):
 
         # map categories to color
         cat_colors = list(map(plt.cm.tab10, range(len(category_values))))
-        category_map = {}
+        category_to_color = {}
         for v, color in zip(category_values, cat_colors):
-            category_map[v] = color
+            category_to_color[v] = color
 
         # map label to color
-        category_map2 = {}
+        label_to_color = {}
         for row in categories:
             label = row[key]
             cat = row["category"]
-            category_map2[label] = category_map[cat]
+            label_to_color[label] = category_to_color[cat]
 
         # build list of colors
         colors = []
         for label, idx in samples_d.items():
-            color = category_map2[label]
+            color = label_to_color[label]
             colors.append(color)
     else:
         notify(f"nothing in categories file '{filename}'?!")
 
-    return category_map, colors
+    return category_to_color, colors
 
 
 def manysearch_rows_to_index(rows, *, column_name='query_name'):

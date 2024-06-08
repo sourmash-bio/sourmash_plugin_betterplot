@@ -90,7 +90,8 @@ Additional flexibility is provided by the column matching.
 
 Some restrictions of / observations on the current implementation:
 * if a categories CSV is provided, every point must have an
-  associated category.
+  associated category. It should be possible to have MORE many points and
+  categories - checkme, @CTB!
 * there is currently no way to specify a specific color for a
   category; they get assigned at random.
 * it is entirely OK to edit the labels file (see above) and just add
