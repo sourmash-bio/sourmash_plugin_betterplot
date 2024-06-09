@@ -280,7 +280,7 @@ intersections between sketches.
 
 This command:
 ```
-
+sourmash scripts upset 10sketches.sig.zip -o 10sketches.upset.png
 ```
 
 produces:

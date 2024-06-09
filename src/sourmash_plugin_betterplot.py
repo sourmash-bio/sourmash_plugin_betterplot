@@ -993,5 +993,6 @@ class Command_Upset(CommandLinePlugin):
         upsetplot.plot(data)
 
         print(f"saving upsetr figure to '{args.output_figure}'")
-        plt.savefig(args.output_figure)
+        plt.savefig(args.output_figure, bbox_inches="tight")
+        # @CTB use 'notify'
         
