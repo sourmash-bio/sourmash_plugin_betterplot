@@ -11,6 +11,7 @@ from sourmash import sourmash_args
 import os
 import csv
 from collections import defaultdict
+from itertools import chain, combinations
 
 import numpy
 import pylab
@@ -20,6 +21,7 @@ from sklearn.manifold import MDS
 from scipy.sparse import lil_matrix, csr_matrix
 from matplotlib.lines import Line2D
 import seaborn as sns
+import upsetplot
 
 from sourmash.logging import debug_literal, error, notify, print_results
 from sourmash.plugins import CommandLinePlugin
@@ -893,3 +895,103 @@ class Command_Clustermap1(CommandLinePlugin):
 
         fig.savefig(args.output_figure, bbox_inches="tight")
         notify(f"wrote plot to: {args.output_figure}")
+
+
+class Command_Upset(CommandLinePlugin):
+    command = "upset"  # 'scripts <command>'
+    description = "visualize intersections of sketches using upsetplot"  # output with -h
+    usage = "sourmash scripts upset <sketches> [<sketches> ...] -o <output>.png"  # output with no args/bad args as well as -h
+    epilog = epilog  # output with -h
+    formatter_class = argparse.RawTextHelpFormatter  # do not reformat multiline
+
+    def __init__(self, p):
+        super().__init__(p)
+        p.add_argument('sketches', nargs='+')
+        p.add_argument('--show-singletons', action='store_true',
+                       help='show membership of single sketches as well')
+        p.add_argument('-o', '--output-figure', required=True)
+        p.add_argument('--truncate-labels-at', default=30, type=int,
+                       help="limit labels to this length (default: 30)")
+        p.add_argument('--scaled', type=int, default=1000)
+        p.add_argument('-k', '--ksize', type=int, default=31)
+        # add names-from or something @CTB
+        # add min-overlap or something @CTB
+        # look at other args for upsetplot
+        # what's going on with left side?
+        
+    def main(self, args):
+        super().main(args)
+
+        # https://docs.python.org/3/library/itertools.html
+        def powerset(iterable, *, start=2):
+            "powerset([1,2,3]) → () (1,) (2,) (3,) (1,2) (1,3) (2,3) (1,2,3)"
+            s = list(iterable)
+            return chain.from_iterable(combinations(s, r) for r in range(start, len(s)+1))
+
+        scaled = args.scaled
+
+        siglist = []
+        for filename in args.sketches:
+            idx = sourmash.load_file_as_index(filename)
+            idx = idx.select(ksize=args.ksize)
+
+            for ss in idx.signatures():
+                with ss.update() as ss:
+                    ss.minhash = ss.minhash.downsample(scaled=args.scaled)
+                siglist.append(ss)
+
+        print(f"Loaded {len(siglist)} signatures & downsampled to scaled={scaled}")
+
+        # @CTB: check scaled, ksize, etc.
+
+        if not siglist:
+            print(f"ERROR: found no sketches. Exiting!")
+            sys.exit(-1)
+
+        if len(siglist) > 10:
+            print(f"WARNING: this is probably too many sketches.")
+
+        start = 2
+        if args.show_singletons:
+            print(f"Showing individual sketch membership b/c of --show-singletons")
+            start = 1
+        else:
+            print(f"Omitting individual sketch membership; use --show-singletons to see.")
+
+        pset = list(powerset(siglist, start=start))
+        pset.sort(key=lambda x: -len(x))
+        #get_name = lambda x: [ ss.name.split(' ')[0] for ss in x ]
+        truncate_at = args.truncate_labels_at
+        truncate_name = lambda x: x[:truncate_at-3] + '...' if len(x) >= truncate_at else x
+        get_name = lambda x: [ truncate_name(ss.name) for ss in x ]
+        names = [ get_name(combo) for combo in pset ]
+        print(f"powerset of distinct combinations: {len(pset)}")
+
+        print(f"generating intersections...")
+        counts = []
+        nonzero_names = []
+        subtract_me = set()
+        for n, combo in enumerate(pset):
+            if n and n % 10 == 0:
+                print(f"...{n} of {len(pset)}", end="\r")
+
+            combo = list(combo)
+            ss = combo.pop()
+            hashes = set(ss.minhash.hashes) - subtract_me
+
+            while combo and hashes:
+                ss = combo.pop()
+                hashes.intersection_update(ss.minhash.hashes)
+
+            if hashes:
+                counts.append(len(hashes) * scaled)
+                nonzero_names.append(names[n])
+                subtract_me.update(hashes)
+        print(f"\n...done! {len(nonzero_names)} non-empty intersections of {len(names)} total.")
+
+        data = upsetplot.from_memberships(nonzero_names, counts)
+        upsetplot.plot(data)
+
+        print(f"saving upsetr figure to '{args.output_figure}'")
+        plt.savefig(args.output_figure)
+        

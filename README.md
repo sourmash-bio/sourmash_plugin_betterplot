@@ -273,6 +273,20 @@ produce:
 
 ![clustermap1 of 10 sketches x 10 sketches](examples/clustermap1.10sketches.png)
 
+### `upset` - plot sketch intersections using UpSetPlot
+
+Plot an [UpSetPlot](https://upsetplot.readthedocs.io/en/stable/) of the
+intersections between sketches.
+
+This command:
+```
+
+```
+
+produces:
+
+![upset plot of 10 sketches intersections](examples/10sketches.upset.png)
+
 ## Support
 
 We suggest filing issues in [the main sourmash issue tracker](https://github.com/dib-lab/sourmash/issues) as that receives more attention!

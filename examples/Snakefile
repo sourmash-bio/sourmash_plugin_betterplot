@@ -12,6 +12,7 @@ rule all:
         "plot2.pairwise.10sketches.cmp.png",
         "plot3.10sketches.cmp.png",
         "clustermap1.10sketches.png",
+        "10sketches.upset.png"
 
 rule cmp_3sketches:
     input:
@@ -180,4 +181,13 @@ rule clustermap1_10sketches:
     shell: """
         sourmash scripts clustermap1 {input.cmp} -o {output} \
             -u containment -R {input.categories}
+    """
+
+rule upset_10sketches:
+    input:
+        sigs="10sketches.sig.zip"
+    output:
+        fig="10sketches.upset.png"
+    shell: """
+        sourmash scripts upset {input.sigs} -o {output.fig}
     """

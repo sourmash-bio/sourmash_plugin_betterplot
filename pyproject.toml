@@ -3,10 +3,11 @@ name = "sourmash_plugin_betterplot"
 description = "sourmash plugin for improved plotting/viz and cluster examination."
 readme = "README.md"
 requires-python = ">=3.10"
-version = "0.3.5"
+version = "0.4"
 
 dependencies = ["sourmash>=4.8.8,<5",
-                "matplotlib", "numpy", "scipy", "scikit-learn", "seaborn"]
+                "matplotlib", "numpy", "scipy", "scikit-learn",
+                "seaborn", "upsetplot"]
 
 [metadata]
 license = { text = "BSD 3-Clause License" }
@@ -18,3 +19,4 @@ mds_command = "sourmash_plugin_betterplot:Command_MDS"
 mds2_command = "sourmash_plugin_betterplot:Command_MDS2"
 pairwise_to_compare_command = "sourmash_plugin_betterplot:Command_PairwiseToCompare"
 clustermap1_command = "sourmash_plugin_betterplot:Command_Clustermap1"
+upset_command = "sourmash_plugin_betterplot:Command_Upset"
