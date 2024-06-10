@@ -178,10 +178,13 @@ rule tsne2_64sketches:
         cmp="64sketches.pairwise.csv",
         categories="64sketches.pairwise.clusters.cats.csv",
     output:
-        "tsne2.64sketches.cmp.png"
+        png="tsne2.64sketches.cmp.png",
+        cmp="tsne2.64sketches.cmp",
+        labels="tsne2.64sketches.labels.csv",
     shell: """
-        sourmash scripts tsne2 {input.cmp} -o {output} \
-           -C {input.categories}
+        sourmash scripts tsne2 {input.cmp} -o {output.png} \
+           -C {input.categories} --save-matrix {output.cmp} \
+           --save-labels-to {output.labels}
     """
 
 rule convert_10sketches_pairwise_to_cmp:
@@ -192,7 +195,7 @@ rule convert_10sketches_pairwise_to_cmp:
         labels_txt="10sketches.pairwise.cmp.labels.txt",
         labels_csv="10sketches.pairwise.cmp.labels_to.csv",
     shell: """
-        sourmash scripts pairwise_to_compare {input.cmp} -o {output.cmp} \
+        sourmash scripts pairwise_to_matrix {input.cmp} -o {output.cmp} \
             --labels-to {output.labels_csv}
     """
         

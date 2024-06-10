@@ -497,10 +497,10 @@ class Command_MDS(CommandLinePlugin):
         plt.savefig(args.output_figure)
 
 
-class Command_PairwiseToCompare(CommandLinePlugin):
-    command = "pairwise_to_compare"  # 'scripts <command>'
+class Command_PairwiseToMatrix(CommandLinePlugin):
+    command = "pairwise_to_matrix"  # 'scripts <command>'
     description = "convert pairwise CSV output to a 'compare' matrix"  # output with -h
-    usage = "sourmash scripts pairwise_to_compare <pairwise_csv> -o <matrix_cmp>"  # output with no args/bad args as well as -h
+    usage = "sourmash scripts pairwise_to_matrix <pairwise_csv> -o <matrix_cmp>"  # output with no args/bad args as well as -h
     epilog = epilog  # output with -h
     formatter_class = argparse.RawTextHelpFormatter  # do not reformat multiline
 
@@ -516,12 +516,12 @@ class Command_PairwiseToCompare(CommandLinePlugin):
     def main(self, args):
         super().main(args)
 
-        print(f"loading '{args.pairwise_csv}'")
+        notify(f"loading '{args.pairwise_csv}'")
         with sourmash_args.FileInputCSV(args.pairwise_csv) as r:
             rows = list(r)
 
         sample_d = manysearch_rows_to_index(rows)
-        print(f"loaded {len(rows)} rows containing {len(sample_d)} distinct samples")
+        notify(f"loaded {len(rows)} rows containing {len(sample_d)} distinct samples")
 
         mat = numpy.zeros((len(sample_d), len(sample_d)))
 
@@ -538,17 +538,17 @@ class Command_PairwiseToCompare(CommandLinePlugin):
 
         numpy.fill_diagonal(mat, 1)
 
-        print(f"writing output matrix to '{args.output_matrix}'")
+        notify(f"writing output matrix to '{args.output_matrix}'")
         with open(args.output_matrix, "wb") as fp:
             numpy.save(fp, mat)
 
-        print(f"writing output labels.txt to '{args.output_matrix}.labels.txt'")
+        notify(f"writing output labels.txt to '{args.output_matrix}.labels.txt'")
         with open(args.output_matrix + ".labels.txt", "wt") as fp:
             for label, n in sample_d.items():
                 fp.write(label + "\n")
 
         if args.labels_to:
-            print(f"writing output labels csv to '{args.labels_to}'")
+            notify(f"writing output labels csv to '{args.labels_to}'")
             with open(args.labels_to, "w", newline="") as fp:
                 w = csv.writer(fp)
                 w.writerow(["sort_order", "label"])
@@ -581,9 +581,9 @@ class Command_MDS2(CommandLinePlugin):
             rows = list(r)
 
         # pick out all the distinct queries/matches.
-        print(f"loaded {len(rows)} rows from '{args.pairwise_csv}'")
+        notify(f"loaded {len(rows)} rows from '{args.pairwise_csv}'")
         sample_d = manysearch_rows_to_index(rows, column_name='both')
-        print(f"loaded {len(sample_d)} total elements")
+        notify(f"loaded {len(sample_d)} total elements")
 
         mat = numpy.zeros((len(sample_d), len(sample_d)))
 
@@ -815,12 +815,12 @@ class Command_Clustermap1(CommandLinePlugin):
             rows = list(r)
 
         # pick out all the distinct queries/matches.
-        print(f"loaded {len(rows)} rows from '{args.manysearch_csv}'")
+        notify(f"loaded {len(rows)} rows from '{args.manysearch_csv}'")
 
         query_d = manysearch_rows_to_index(rows, column_name='query_name')
         against_d = manysearch_rows_to_index(rows, column_name='match_name')
 
-        print(f"loaded {len(query_d)} x {len(against_d)} total elements")
+        notify(f"loaded {len(query_d)} x {len(against_d)} total elements")
 
         query_d_items = list(sorted(query_d.items(), key=lambda x: x[1]))
         against_d_items = list(sorted(against_d.items(), key=lambda x: x[1]))
@@ -828,10 +828,10 @@ class Command_Clustermap1(CommandLinePlugin):
         mat = numpy.zeros((len(query_d), len(against_d)))
 
         colname = args.use_column
-        print(f"using column '{colname}'")
+        notify(f"using column '{colname}'")
         make_bool = args.boolean
         if make_bool:
-            print(f"forcing values to 0 / 1 and disabling color bar because of --boolean")
+            notify(f"forcing values to 0 / 1 and disabling color bar because of --boolean")
 
         for row in rows:
             q = row["query_name"]
@@ -950,23 +950,23 @@ class Command_Upset(CommandLinePlugin):
                     ss.minhash = ss.minhash.downsample(scaled=args.scaled)
                 siglist.append(ss)
 
-        print(f"Loaded {len(siglist)} signatures & downsampled to scaled={scaled}")
+        notify(f"Loaded {len(siglist)} signatures & downsampled to scaled={scaled}")
 
         # @CTB: check scaled, ksize, etc.
 
         if not siglist:
-            print(f"ERROR: found no sketches. Exiting!")
+            notify(f"ERROR: found no sketches. Exiting!")
             sys.exit(-1)
 
         if len(siglist) > 10:
-            print(f"WARNING: this is probably too many sketches.")
+            notify(f"WARNING: this is probably too many sketches.")
 
         start = 2
         if args.show_singletons:
-            print(f"Showing individual sketch membership b/c of --show-singletons")
+            notify(f"Showing individual sketch membership b/c of --show-singletons")
             start = 1
         else:
-            print(f"Omitting individual sketch membership; use --show-singletons to see.")
+            notify(f"Omitting individual sketch membership; use --show-singletons to see.")
 
         pset = list(powerset(siglist, start=start))
         pset.sort(key=lambda x: -len(x))
@@ -975,15 +975,15 @@ class Command_Upset(CommandLinePlugin):
         truncate_name = lambda x: x[:truncate_at-3] + '...' if len(x) >= truncate_at else x
         get_name = lambda x: [ truncate_name(ss.name) for ss in x ]
         names = [ get_name(combo) for combo in pset ]
-        print(f"powerset of distinct combinations: {len(pset)}")
+        notify(f"powerset of distinct combinations: {len(pset)}")
 
-        print(f"generating intersections...")
+        notify(f"generating intersections...")
         counts = []
         nonzero_names = []
         subtract_me = set()
         for n, combo in enumerate(pset):
             if n and n % 10 == 0:
-                print(f"...{n} of {len(pset)}", end="\r")
+                notify(f"...{n} of {len(pset)}", end="\r")
 
             combo = list(combo)
             ss = combo.pop()
@@ -997,12 +997,12 @@ class Command_Upset(CommandLinePlugin):
                 counts.append(len(hashes) * scaled)
                 nonzero_names.append(names[n])
                 subtract_me.update(hashes)
-        print(f"\n...done! {len(nonzero_names)} non-empty intersections of {len(names)} total.")
+        notify(f"\n...done! {len(nonzero_names)} non-empty intersections of {len(names)} total.")
 
         data = upsetplot.from_memberships(nonzero_names, counts)
         upsetplot.plot(data)
 
-        print(f"saving upsetr figure to '{args.output_figure}'")
+        notify(f"saving upsetr figure to '{args.output_figure}'")
         plt.savefig(args.output_figure, bbox_inches="tight")
         # @CTB use 'notify'
         
@@ -1081,6 +1081,8 @@ class Command_TSNE2(CommandLinePlugin):
             "-C", "--categories-csv", help="CSV mapping label columns to categories"
         )
         subparser.add_argument("-o", "--output-figure", required=True)
+        subparser.add_argument("--save-matrix", help="save a numpy matrix")
+        subparser.add_argument("--save-labels-to", help="save a labels_to csv")
 
     def main(self, args):
         super().main(args)
@@ -1089,9 +1091,9 @@ class Command_TSNE2(CommandLinePlugin):
             rows = list(r)
 
         # pick out all the distinct queries/matches.
-        print(f"loaded {len(rows)} rows from '{args.pairwise_csv}'")
+        notify(f"loaded {len(rows)} rows from '{args.pairwise_csv}'")
         sample_d = manysearch_rows_to_index(rows, column_name='both')
-        print(f"loaded {len(sample_d)} total elements")
+        notify(f"loaded {len(sample_d)} total elements")
 
         mat = numpy.zeros((len(sample_d), len(sample_d)))
 
@@ -1107,6 +1109,19 @@ class Command_TSNE2(CommandLinePlugin):
             mat[mi, qi] = jaccard
 
         numpy.fill_diagonal(mat, 1)
+
+        if args.save_matrix:
+            notify(f"writing numpy matrix to '{args.save_matrix}'")
+            with open(args.save_matrix, "wb") as fp:
+                numpy.save(fp, mat)
+
+        if args.save_labels_to:
+            notify(f"writing output labels csv to '{args.save_labels_to}'")
+            with open(args.save_labels_to, "w", newline="") as fp:
+                w = csv.writer(fp)
+                w.writerow(["sort_order", "label"])
+                for label, n in sample_d.items():
+                    w.writerow([n, label])
 
         # load categories?
         category_map = None
@@ -1144,7 +1159,7 @@ class Command_ClusterToCategories(CommandLinePlugin):
             rows = list(r)
 
         samples_d = manysearch_rows_to_index(rows, column_name='both')
-        print(f"loaded {len(samples_d)} samples from '{args.manysearch_csv}'")
+        notify(f"loaded {len(samples_d)} samples from '{args.manysearch_csv}'")
 
         ident_d = {}
         for name, sample_idx in samples_d.items():
@@ -1163,8 +1178,8 @@ class Command_ClusterToCategories(CommandLinePlugin):
                 cluster = 'unclustered'
             cluster_to_idents[cluster].update(nodes)
 
-        print(f"loaded {len(cluster_to_idents)} clusters")
-        print(f"{len(cluster_to_idents['unclustered'])} singletons => 'unclustered'")
+        notify(f"loaded {len(cluster_to_idents)} clusters")
+        notify(f"{len(cluster_to_idents['unclustered'])} singletons => 'unclustered'")
 
         notfound = set(ident_d)
 
@@ -1178,7 +1193,7 @@ class Command_ClusterToCategories(CommandLinePlugin):
                 notfound -= idents
 
             if notfound:
-                print(f"{len(notfound)} unmentioned samples => 'unclustered'")
+                notify(f"{len(notfound)} unmentioned samples => 'unclustered'")
                 for ident in notfound:
                     name = ident_d[ident]
                     w.writerow([name, 'unclustered'])
