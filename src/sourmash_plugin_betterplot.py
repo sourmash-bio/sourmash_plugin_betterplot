@@ -516,10 +516,12 @@ class Command_PairwiseToCompare(CommandLinePlugin):
     def main(self, args):
         super().main(args)
 
+        print(f"loading '{args.pairwise_csv}'")
         with sourmash_args.FileInputCSV(args.pairwise_csv) as r:
             rows = list(r)
 
         sample_d = manysearch_rows_to_index(rows)
+        print(f"loaded {len(rows)} rows containing {len(sample_d)} distinct samples")
 
         mat = numpy.zeros((len(sample_d), len(sample_d)))
 
@@ -536,14 +538,17 @@ class Command_PairwiseToCompare(CommandLinePlugin):
 
         numpy.fill_diagonal(mat, 1)
 
+        print(f"writing output matrix to '{args.output_matrix}'")
         with open(args.output_matrix, "wb") as fp:
             numpy.save(fp, mat)
 
+        print(f"writing output labels.txt to '{args.output_matrix}.labels.txt'")
         with open(args.output_matrix + ".labels.txt", "wt") as fp:
             for label, n in sample_d.items():
                 fp.write(label + "\n")
 
         if args.labels_to:
+            print(f"writing output labels csv to '{args.labels_to}'")
             with open(args.labels_to, "w", newline="") as fp:
                 w = csv.writer(fp)
                 w.writerow(["sort_order", "label"])
@@ -1003,7 +1008,8 @@ class Command_Upset(CommandLinePlugin):
         
 
 def plot_tsne(matrix, *, colors=None, category_map=None):
-    tsne = TSNE(n_components=2, random_state=42, perplexity=50)
+    perplexity = min(len(matrix) - 1, 50)
+    tsne = TSNE(n_components=2, random_state=42, perplexity=perplexity)
     tsne_coords = tsne.fit_transform(matrix)
     plt.scatter(tsne_coords[:, 0], tsne_coords[:, 1], color=colors)
     plt.xlabel("Dimension 1")
@@ -1061,7 +1067,7 @@ class Command_TSNE(CommandLinePlugin):
 class Command_TSNE2(CommandLinePlugin):
     command = "tsne2"  # 'scripts <command>'
     description = "plot a 2-D multidimensional scaling plot from branchwater plugin's 'pairwise' output"  # output with -h
-    usage = "sourmash scripts tsne2 <matrix> -o <figure.png>"  # output with no args/bad args as well as -h
+    usage = "sourmash scripts tsne2 <pairwise_csv> -o <figure.png>"  # output with no args/bad args as well as -h
     epilog = epilog  # output with -h
     formatter_class = argparse.RawTextHelpFormatter  # do not reformat multiline
 
@@ -1160,6 +1166,8 @@ class Command_ClusterToCategories(CommandLinePlugin):
         print(f"loaded {len(cluster_to_idents)} clusters")
         print(f"{len(cluster_to_idents['unclustered'])} singletons => 'unclustered'")
 
+        notfound = set(ident_d)
+
         with open(args.output_categories_csv, 'w', newline='') as fp:
             w = csv.writer(fp)
             w.writerow(['label', 'category'])
@@ -1167,4 +1175,10 @@ class Command_ClusterToCategories(CommandLinePlugin):
                 for ident in idents:
                     name = ident_d[ident]
                     w.writerow([name, cluster_name])
+                notfound -= idents
 
+            if notfound:
+                print(f"{len(notfound)} unmentioned samples => 'unclustered'")
+                for ident in notfound:
+                    name = ident_d[ident]
+                    w.writerow([name, 'unclustered'])
