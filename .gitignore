@@ -8,3 +8,4 @@ src/sourmash_plugin_betterplot.egg-info/
 *.csv
 *~
 examples/10sketches.sig.zip
+*.cluster_sizes.txt
