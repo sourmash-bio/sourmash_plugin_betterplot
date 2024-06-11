@@ -5,21 +5,24 @@ epilog = """
 Need help? Have questions? Ask at http://github.com/sourmash-bio/sourmash/issues!
 """
 
+import sys
 import argparse
 import sourmash
 from sourmash import sourmash_args
 import os
 import csv
 from collections import defaultdict
+from itertools import chain, combinations
 
 import numpy
 import pylab
 import matplotlib.pyplot as plt
 import scipy.cluster.hierarchy as sch
-from sklearn.manifold import MDS
+from sklearn.manifold import MDS, TSNE
 from scipy.sparse import lil_matrix, csr_matrix
 from matplotlib.lines import Line2D
 import seaborn as sns
+import upsetplot
 
 from sourmash.logging import debug_literal, error, notify, print_results
 from sourmash.plugins import CommandLinePlugin
@@ -309,6 +312,10 @@ def plot_composite_matrix(
         dend_kwargs = dict(color_threshold=float(cut_point))
 
     labeltext = [row["label"] for row in labelinfo]
+
+    truncate_name = lambda x: x[:30-3] + '...' if len(x) >= 30 else x
+    labeltext = [truncate_name(label) for label in labeltext]
+
     Z1 = sch.dendrogram(
         Y,
         orientation="left",
@@ -434,6 +441,21 @@ def plot2(args):
                     w.writerow(row)
 
 
+def plot_mds(matrix, *, colors=None, category_map=None):
+    mds = MDS(n_components=2, dissimilarity="precomputed", random_state=42)
+    mds_coords = mds.fit_transform(matrix)
+    plt.scatter(mds_coords[:, 0], mds_coords[:, 1], color=colors)
+    plt.xlabel("Dimension 1")
+    plt.ylabel("Dimension 2")
+
+    if colors and category_map:
+        # create a custom legend of just the categories
+        legend_elements = []
+        for k, v in category_map.items():
+            legend_elements.append(Line2D([0], [0], color=v, label=k, marker="o", lw=0))
+        plt.legend(handles=legend_elements)
+
+
 class Command_MDS(CommandLinePlugin):
     command = "mds"  # 'scripts <command>'
     description = "plot a 2-D multidimensional scaling plot from 'sourmash compare' output"  # output with -h
@@ -472,13 +494,14 @@ class Command_MDS(CommandLinePlugin):
         dissim = 1 - mat
         plot_mds(dissim, colors=colors, category_map=category_map)
 
+        notify(f"writing figure to '{args.output_figure}'")
         plt.savefig(args.output_figure)
 
 
-class Command_PairwiseToCompare(CommandLinePlugin):
-    command = "pairwise_to_compare"  # 'scripts <command>'
+class Command_PairwiseToMatrix(CommandLinePlugin):
+    command = "pairwise_to_matrix"  # 'scripts <command>'
     description = "convert pairwise CSV output to a 'compare' matrix"  # output with -h
-    usage = "sourmash scripts pairwise_to_compare <pairwise_csv> -o <matrix_cmp>"  # output with no args/bad args as well as -h
+    usage = "sourmash scripts pairwise_to_matrix <pairwise_csv> -o <matrix_cmp>"  # output with no args/bad args as well as -h
     epilog = epilog  # output with -h
     formatter_class = argparse.RawTextHelpFormatter  # do not reformat multiline
 
@@ -494,10 +517,12 @@ class Command_PairwiseToCompare(CommandLinePlugin):
     def main(self, args):
         super().main(args)
 
+        notify(f"loading '{args.pairwise_csv}'")
         with sourmash_args.FileInputCSV(args.pairwise_csv) as r:
             rows = list(r)
 
         sample_d = manysearch_rows_to_index(rows)
+        notify(f"loaded {len(rows)} rows containing {len(sample_d)} distinct samples")
 
         mat = numpy.zeros((len(sample_d), len(sample_d)))
 
@@ -514,14 +539,17 @@ class Command_PairwiseToCompare(CommandLinePlugin):
 
         numpy.fill_diagonal(mat, 1)
 
+        notify(f"writing output matrix to '{args.output_matrix}'")
         with open(args.output_matrix, "wb") as fp:
             numpy.save(fp, mat)
 
+        notify(f"writing output labels.txt to '{args.output_matrix}.labels.txt'")
         with open(args.output_matrix + ".labels.txt", "wt") as fp:
             for label, n in sample_d.items():
                 fp.write(label + "\n")
 
         if args.labels_to:
+            notify(f"writing output labels csv to '{args.labels_to}'")
             with open(args.labels_to, "w", newline="") as fp:
                 w = csv.writer(fp)
                 w.writerow(["sort_order", "label"])
@@ -554,9 +582,9 @@ class Command_MDS2(CommandLinePlugin):
             rows = list(r)
 
         # pick out all the distinct queries/matches.
-        print(f"loaded {len(rows)} rows from '{args.pairwise_csv}'")
+        notify(f"loaded {len(rows)} rows from '{args.pairwise_csv}'")
         sample_d = manysearch_rows_to_index(rows, column_name='both')
-        print(f"loaded {len(sample_d)} total elements")
+        notify(f"loaded {len(sample_d)} total elements")
 
         mat = numpy.zeros((len(sample_d), len(sample_d)))
 
@@ -584,6 +612,7 @@ class Command_MDS2(CommandLinePlugin):
         dissim = 1 - mat
         plot_mds(dissim, colors=colors, category_map=category_map)
 
+        notify(f"writing figure to '{args.output_figure}'")
         plt.savefig(args.output_figure)
 
 
@@ -603,21 +632,6 @@ def create_sparse_dissimilarity_matrix(tuples, num_objects):
     # Convert to array format
     # @CTB use tocsr or tocoo instead??
     return similarity_matrix.toarray()
-
-
-def plot_mds(matrix, *, colors=None, category_map=None):
-    mds = MDS(n_components=2, dissimilarity="precomputed", random_state=42)
-    mds_coords = mds.fit_transform(matrix)
-    plt.scatter(mds_coords[:, 0], mds_coords[:, 1], color=colors)
-    plt.xlabel("Dimension 1")
-    plt.ylabel("Dimension 2")
-
-    if colors and category_map:
-        # create a custom legend of just the categories
-        legend_elements = []
-        for k, v in category_map.items():
-            legend_elements.append(Line2D([0], [0], color=v, label=k, marker="o", lw=0))
-        plt.legend(handles=legend_elements)
 
 
 class Command_Plot3(CommandLinePlugin):
@@ -803,12 +817,12 @@ class Command_Clustermap1(CommandLinePlugin):
             rows = list(r)
 
         # pick out all the distinct queries/matches.
-        print(f"loaded {len(rows)} rows from '{args.manysearch_csv}'")
+        notify(f"loaded {len(rows)} rows from '{args.manysearch_csv}'")
 
         query_d = manysearch_rows_to_index(rows, column_name='query_name')
         against_d = manysearch_rows_to_index(rows, column_name='match_name')
 
-        print(f"loaded {len(query_d)} x {len(against_d)} total elements")
+        notify(f"loaded {len(query_d)} x {len(against_d)} total elements")
 
         query_d_items = list(sorted(query_d.items(), key=lambda x: x[1]))
         against_d_items = list(sorted(against_d.items(), key=lambda x: x[1]))
@@ -816,10 +830,10 @@ class Command_Clustermap1(CommandLinePlugin):
         mat = numpy.zeros((len(query_d), len(against_d)))
 
         colname = args.use_column
-        print(f"using column '{colname}'")
+        notify(f"using column '{colname}'")
         make_bool = args.boolean
         if make_bool:
-            print(f"forcing values to 0 / 1 and disabling color bar because of --boolean")
+            notify(f"forcing values to 0 / 1 and disabling color bar because of --boolean")
 
         for row in rows:
             q = row["query_name"]
@@ -893,3 +907,299 @@ class Command_Clustermap1(CommandLinePlugin):
 
         fig.savefig(args.output_figure, bbox_inches="tight")
         notify(f"wrote plot to: {args.output_figure}")
+
+
+class Command_Upset(CommandLinePlugin):
+    command = "upset"  # 'scripts <command>'
+    description = "visualize intersections of sketches using upsetplot"  # output with -h
+    usage = "sourmash scripts upset <sketches> [<sketches> ...] -o <output>.png"  # output with no args/bad args as well as -h
+    epilog = epilog  # output with -h
+    formatter_class = argparse.RawTextHelpFormatter  # do not reformat multiline
+
+    def __init__(self, p):
+        super().__init__(p)
+        p.add_argument('sketches', nargs='+')
+        p.add_argument('--show-singletons', action='store_true',
+                       help='show membership of single sketches as well')
+        p.add_argument('-o', '--output-figure', required=True)
+        p.add_argument('--truncate-labels-at', default=30, type=int,
+                       help="limit labels to this length (default: 30)")
+        p.add_argument('--scaled', type=int, default=1000)
+        p.add_argument('-k', '--ksize', type=int, default=31)
+        # add names-from or something @CTB
+        # add min-overlap or something @CTB
+        # look at other args for upsetplot
+        # what's going on with left side?
+        
+    def main(self, args):
+        super().main(args)
+
+        # https://docs.python.org/3/library/itertools.html
+        def powerset(iterable, *, start=2):
+            "powerset([1,2,3]) → () (1,) (2,) (3,) (1,2) (1,3) (2,3) (1,2,3)"
+            s = list(iterable)
+            return chain.from_iterable(combinations(s, r) for r in range(start, len(s)+1))
+
+        scaled = args.scaled
+
+        siglist = []
+        for filename in args.sketches:
+            idx = sourmash.load_file_as_index(filename)
+            idx = idx.select(ksize=args.ksize)
+
+            for ss in idx.signatures():
+                with ss.update() as ss:
+                    ss.minhash = ss.minhash.downsample(scaled=args.scaled)
+                siglist.append(ss)
+
+        notify(f"Loaded {len(siglist)} signatures & downsampled to scaled={scaled}")
+
+        # @CTB: check scaled, ksize, etc.
+
+        if not siglist:
+            notify(f"ERROR: found no sketches. Exiting!")
+            sys.exit(-1)
+
+        if len(siglist) > 10:
+            notify(f"WARNING: this is probably too many sketches.")
+
+        start = 2
+        if args.show_singletons:
+            notify(f"Showing individual sketch membership b/c of --show-singletons")
+            start = 1
+        else:
+            notify(f"Omitting individual sketch membership; use --show-singletons to see.")
+
+        pset = list(powerset(siglist, start=start))
+        pset.sort(key=lambda x: -len(x))
+        #get_name = lambda x: [ ss.name.split(' ')[0] for ss in x ]
+        truncate_at = args.truncate_labels_at
+        truncate_name = lambda x: x[:truncate_at-3] + '...' if len(x) >= truncate_at else x
+        get_name = lambda x: [ truncate_name(ss.name) for ss in x ]
+        names = [ get_name(combo) for combo in pset ]
+        notify(f"powerset of distinct combinations: {len(pset)}")
+
+        notify(f"generating intersections...")
+        counts = []
+        nonzero_names = []
+        subtract_me = set()
+        for n, combo in enumerate(pset):
+            if n and n % 10 == 0:
+                notify(f"...{n} of {len(pset)}", end="\r")
+
+            combo = list(combo)
+            ss = combo.pop()
+            hashes = set(ss.minhash.hashes) - subtract_me
+
+            while combo and hashes:
+                ss = combo.pop()
+                hashes.intersection_update(ss.minhash.hashes)
+
+            if hashes:
+                counts.append(len(hashes) * scaled)
+                nonzero_names.append(names[n])
+                subtract_me.update(hashes)
+        notify(f"\n...done! {len(nonzero_names)} non-empty intersections of {len(names)} total.")
+
+        data = upsetplot.from_memberships(nonzero_names, counts)
+        upsetplot.plot(data)
+
+        notify(f"saving upsetr figure to '{args.output_figure}'")
+        plt.savefig(args.output_figure, bbox_inches="tight")
+        # @CTB use 'notify'
+        
+
+def plot_tsne(matrix, *, colors=None, category_map=None):
+    perplexity = min(len(matrix) - 1, 50)
+    tsne = TSNE(n_components=2, random_state=42, perplexity=perplexity)
+    tsne_coords = tsne.fit_transform(matrix)
+    plt.scatter(tsne_coords[:, 0], tsne_coords[:, 1], color=colors)
+    plt.xlabel("Dimension 1")
+    plt.ylabel("Dimension 2")
+
+    if colors and category_map:
+        # create a custom legend of just the categories
+        legend_elements = []
+        for k, v in category_map.items():
+            legend_elements.append(Line2D([0], [0], color=v, label=k, marker="o", lw=0))
+        plt.legend(handles=legend_elements)
+
+
+class Command_TSNE(CommandLinePlugin):
+    command = "tsne"  # 'scripts <command>'
+    description = "plot a tSNE from 'sourmash compare' output"  # output with -h
+    usage = "sourmash scripts tsne <matrix> <labels_csv> -o <figure.png>"  # output with no args/bad args as well as -h
+    epilog = epilog  # output with -h
+    formatter_class = argparse.RawTextHelpFormatter  # do not reformat multiline
+
+    def __init__(self, subparser):
+        super().__init__(subparser)
+
+        subparser.add_argument(
+            "comparison_matrix", help="output from 'sourmash compare'"
+        )
+        subparser.add_argument(
+            "labels_from", help="output from 'sourmash compare --labels-to'"
+        )
+        subparser.add_argument(
+            "-C", "--categories-csv", help="CSV mapping label columns to categories"
+        )
+        subparser.add_argument("-o", "--output-figure", required=True)
+
+    def main(self, args):
+        super().main(args)
+
+        with open(args.comparison_matrix, "rb") as f:
+            mat = numpy.load(f)
+
+        labelinfo = load_labelinfo_csv(args.labels_from)
+
+        # load categories?
+        category_map = None
+        colors = None
+        if args.categories_csv:
+            category_map, colors = load_categories_csv(args.categories_csv, labelinfo)
+
+        dissim = 1 - mat
+        plot_tsne(dissim, colors=colors, category_map=category_map)
+
+        notify(f"writing figure to '{args.output_figure}'")
+        plt.savefig(args.output_figure)
+
+
+class Command_TSNE2(CommandLinePlugin):
+    command = "tsne2"  # 'scripts <command>'
+    description = "plot a 2-D multidimensional scaling plot from branchwater plugin's 'pairwise' output"  # output with -h
+    usage = "sourmash scripts tsne2 <pairwise_csv> -o <figure.png>"  # output with no args/bad args as well as -h
+    epilog = epilog  # output with -h
+    formatter_class = argparse.RawTextHelpFormatter  # do not reformat multiline
+
+    def __init__(self, subparser):
+        super().__init__(subparser)
+
+        subparser.add_argument(
+            "pairwise_csv", help="output from 'sourmash scripts pairwise'"
+        )
+        subparser.add_argument(
+            "-C", "--categories-csv", help="CSV mapping label columns to categories"
+        )
+        subparser.add_argument("-o", "--output-figure", required=True)
+        subparser.add_argument("--save-matrix", help="save a numpy matrix")
+        subparser.add_argument("--save-labels-to", help="save a labels_to csv")
+
+    def main(self, args):
+        super().main(args)
+
+        with sourmash_args.FileInputCSV(args.pairwise_csv) as r:
+            rows = list(r)
+
+        # pick out all the distinct queries/matches.
+        notify(f"loaded {len(rows)} rows from '{args.pairwise_csv}'")
+        sample_d = manysearch_rows_to_index(rows, column_name='both')
+        notify(f"loaded {len(sample_d)} total elements")
+
+        mat = numpy.zeros((len(sample_d), len(sample_d)))
+
+        for row in rows:
+            # get unique indices for each query/match pair.
+            q = row["query_name"]
+            qi = sample_d[q]
+            m = row["match_name"]
+            mi = sample_d[m]
+            jaccard = float(row["jaccard"])
+
+            mat[qi, mi] = jaccard
+            mat[mi, qi] = jaccard
+
+        numpy.fill_diagonal(mat, 1)
+
+        if args.save_matrix:
+            notify(f"writing numpy matrix to '{args.save_matrix}'")
+            with open(args.save_matrix, "wb") as fp:
+                numpy.save(fp, mat)
+
+        if args.save_labels_to:
+            notify(f"writing output labels csv to '{args.save_labels_to}'")
+            with open(args.save_labels_to, "w", newline="") as fp:
+                w = csv.writer(fp)
+                w.writerow(["sort_order", "label"])
+                for label, n in sample_d.items():
+                    w.writerow([n, label])
+
+        # load categories?
+        category_map = None
+        colors = None
+        if args.categories_csv:
+            category_map, colors = load_categories_csv_for_labels(
+                args.categories_csv, sample_d
+            )
+
+        dissim = 1 - mat
+        plot_tsne(dissim, colors=colors, category_map=category_map)
+
+        notify(f"writing figure to '{args.output_figure}'")
+        plt.savefig(args.output_figure)
+
+
+class Command_ClusterToCategories(CommandLinePlugin):
+    command = "cluster_to_categories"  # 'scripts <command>'
+    description = "convert branchwater plugin 'cluster' output to a betterplot categories CSV"  # output with -h
+    usage = "sourmash scripts cluster_to_categories <manysearch_csv> <cluster_csv> -o <categories_csv>"  # output with no args/bad args as well as -h
+    epilog = epilog  # output with -h
+    formatter_class = argparse.RawTextHelpFormatter  # do not reformat multiline
+
+    def __init__(self, p):
+        super().__init__(p)
+        p.add_argument('manysearch_csv')
+        p.add_argument('cluster_csv')
+        p.add_argument('-o', '--output-categories-csv', required=True)
+
+    def main(self, args):
+        super().main(args)
+
+        # load samples
+        with open(args.manysearch_csv, newline='') as fp:
+            r = csv.DictReader(fp)
+            rows = list(r)
+
+        samples_d = manysearch_rows_to_index(rows, column_name='both')
+        notify(f"loaded {len(samples_d)} samples from '{args.manysearch_csv}'")
+
+        ident_d = {}
+        for name, sample_idx in samples_d.items():
+            ident = name.split(' ')[0]
+            ident_d[ident] = name
+
+        with open(args.cluster_csv, newline='') as fp:
+            r = csv.DictReader(fp)
+            rows = list(r)
+
+        cluster_to_idents = defaultdict(set)
+        n_samples_clustered = 0
+        for row in rows:
+            cluster = row['cluster']
+            nodes = row['nodes'].split(';')
+            if len(nodes) == 1:
+                cluster = 'unclustered'
+            cluster_to_idents[cluster].update(nodes)
+            n_samples_clustered += len(nodes)
+
+        notify(f"loaded {len(cluster_to_idents)} clusters containing {n_samples_clustered} members total")
+        notify(f"{len(cluster_to_idents['unclustered'])} singletons => 'unclustered'")
+
+        notfound = set(ident_d)
+
+        with open(args.output_categories_csv, 'w', newline='') as fp:
+            w = csv.writer(fp)
+            w.writerow(['label', 'category'])
+            for cluster_name, idents in cluster_to_idents.items():
+                for ident in idents:
+                    name = ident_d[ident]
+                    w.writerow([name, cluster_name])
+                notfound -= idents
+
+            if notfound:
+                notify(f"{len(notfound)} unmentioned samples => 'unclustered'")
+                for ident in notfound:
+                    name = ident_d[ident]
+                    w.writerow([name, 'unclustered'])

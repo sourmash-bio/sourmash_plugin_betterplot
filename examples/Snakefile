@@ -12,6 +12,9 @@ rule all:
         "plot2.pairwise.10sketches.cmp.png",
         "plot3.10sketches.cmp.png",
         "clustermap1.10sketches.png",
+        "10sketches.upset.png",
+        "tsne.64sketches.cmp.png",
+        "tsne2.64sketches.cmp.png",
 
 rule cmp_3sketches:
     input:
@@ -95,13 +98,28 @@ rule mds_10sketches:
            -C {input.categories}
     """
 
-rule combine_10sketches:
+rule cmp_64sketches:
     input:
-        expand("sketches/{n}.sig.zip", n=sketches_10)
+        "64sketches.sig.zip",
     output:
-        "10sketches.sig.zip"
+        cmp="64sketches.cmp",
+        labels="64sketches.cmp.labels.txt",
+        labels_csv="64sketches.cmp.labels_to.csv",
     shell: """
-        sourmash sig cat {input} -o {output}
+        sourmash compare {input} -o {output.cmp} \
+           --labels-to {output.labels_csv}
+    """
+
+rule tsne_64sketches:
+    input:
+        cmp="64sketches.cmp",
+        labels="64sketches.cmp.labels_to.csv",
+        categories="64sketches.pairwise.clusters.cats.csv",
+    output:
+        "tsne.64sketches.cmp.png"
+    shell: """
+        sourmash scripts tsne {input.cmp} {input.labels} -o {output} \
+           -C {input.categories}
     """
 
 rule r10sketches_pairwise:
@@ -124,6 +142,51 @@ rule mds2_10sketches:
            -C {input.categories}
     """
 
+rule r64sketches_pairwise:
+    input:
+        "64sketches.sig.zip",
+    output:
+        cmp="64sketches.pairwise.csv",
+    shell: """
+        sourmash scripts pairwise {input} -o {output} --write-all
+    """
+
+rule r64sketches_cluster:
+    input:
+        cmp="64sketches.pairwise.csv",
+    output:
+        clusters="64sketches.pairwise.clusters.csv",
+        cluster_sizes="64sketches.pairwise.cluster_sizes.txt",
+    shell: """
+        sourmash scripts cluster {input} -o {output.clusters} \
+            --cluster-sizes {output.cluster_sizes} --similarity jaccard -t 0
+    """
+
+rule r64sketches_clusters_to_cats:
+    input:
+        cmp="64sketches.pairwise.csv",
+        clusters="64sketches.pairwise.clusters.csv",
+    output:
+        cats="64sketches.pairwise.clusters.cats.csv",
+    shell: """
+        sourmash scripts cluster_to_categories {input.cmp} \
+            {input.clusters} -o {output}
+    """
+
+rule tsne2_64sketches:
+    input:
+        cmp="64sketches.pairwise.csv",
+        categories="64sketches.pairwise.clusters.cats.csv",
+    output:
+        png="tsne2.64sketches.cmp.png",
+        cmp="tsne2.64sketches.cmp",
+        labels="tsne2.64sketches.labels.csv",
+    shell: """
+        sourmash scripts tsne2 {input.cmp} -o {output.png} \
+           -C {input.categories} --save-matrix {output.cmp} \
+           --save-labels-to {output.labels}
+    """
+
 rule convert_10sketches_pairwise_to_cmp:
     input:
         cmp="10sketches.pairwise.csv",
@@ -132,7 +195,7 @@ rule convert_10sketches_pairwise_to_cmp:
         labels_txt="10sketches.pairwise.cmp.labels.txt",
         labels_csv="10sketches.pairwise.cmp.labels_to.csv",
     shell: """
-        sourmash scripts pairwise_to_compare {input.cmp} -o {output.cmp} \
+        sourmash scripts pairwise_to_matrix {input.cmp} -o {output.cmp} \
             --labels-to {output.labels_csv}
     """
         
@@ -180,4 +243,13 @@ rule clustermap1_10sketches:
     shell: """
         sourmash scripts clustermap1 {input.cmp} -o {output} \
             -u containment -R {input.categories}
+    """
+
+rule upset_10sketches:
+    input:
+        sigs="10sketches.sig.zip"
+    output:
+        fig="10sketches.upset.png"
+    shell: """
+        sourmash scripts upset {input.sigs} -o {output.fig}
     """
