@@ -1171,14 +1171,16 @@ class Command_ClusterToCategories(CommandLinePlugin):
             rows = list(r)
 
         cluster_to_idents = defaultdict(set)
+        n_samples_clustered = 0
         for row in rows:
             cluster = row['cluster']
             nodes = row['nodes'].split(';')
             if len(nodes) == 1:
                 cluster = 'unclustered'
             cluster_to_idents[cluster].update(nodes)
+            n_samples_clustered += len(nodes)
 
-        notify(f"loaded {len(cluster_to_idents)} clusters")
+        notify(f"loaded {len(cluster_to_idents)} clusters containing {n_samples_clustered} members total")
         notify(f"{len(cluster_to_idents['unclustered'])} singletons => 'unclustered'")
 
         notfound = set(ident_d)

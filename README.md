@@ -207,7 +207,7 @@ produces this plot:
 
 The `sourmash scripts cluster` command from
 [the branchwater plugin](https://github.com/sourmash-bio/sourmash_plugin_branchwater)
-will cluster `pairwise` output; `cluster_to_categories` convers these clusters
+will cluster `pairwise` output; `cluster_to_categories` converts these clusters
 into a categories CSV that can be used to color points and columns/rows.
 
 These commands:
@@ -226,7 +226,7 @@ sourmash scripts cluster_to_categories 64sketches.pairwise.csv \
     64sketches.pairwise.clusters.csv -o 64sketches.pairwise.clusters.cats.csv
 ```
 
-generate `64sketches.pairwise.clusters.cats.csv`, which categorizes the
+produce `64sketches.pairwise.clusters.cats.csv`, which categorizes the
 input samples based on their cluster membership.
 
 ### `tsne` - tSNE plot of comparisons from `sourmash compare` output
