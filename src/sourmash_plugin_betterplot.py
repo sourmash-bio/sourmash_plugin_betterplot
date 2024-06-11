@@ -494,6 +494,7 @@ class Command_MDS(CommandLinePlugin):
         dissim = 1 - mat
         plot_mds(dissim, colors=colors, category_map=category_map)
 
+        notify(f"writing figure to '{args.output_figure}'")
         plt.savefig(args.output_figure)
 
 
@@ -611,6 +612,7 @@ class Command_MDS2(CommandLinePlugin):
         dissim = 1 - mat
         plot_mds(dissim, colors=colors, category_map=category_map)
 
+        notify(f"writing figure to '{args.output_figure}'")
         plt.savefig(args.output_figure)
 
 
@@ -1061,6 +1063,7 @@ class Command_TSNE(CommandLinePlugin):
         dissim = 1 - mat
         plot_tsne(dissim, colors=colors, category_map=category_map)
 
+        notify(f"writing figure to '{args.output_figure}'")
         plt.savefig(args.output_figure)
 
 
@@ -1134,6 +1137,7 @@ class Command_TSNE2(CommandLinePlugin):
         dissim = 1 - mat
         plot_tsne(dissim, colors=colors, category_map=category_map)
 
+        notify(f"writing figure to '{args.output_figure}'")
         plt.savefig(args.output_figure)
 
 
