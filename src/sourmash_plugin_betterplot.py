@@ -7,8 +7,6 @@ Need help? Have questions? Ask at http://github.com/sourmash-bio/sourmash/issues
 
 import sys
 import argparse
-import sourmash
-from sourmash import sourmash_args
 import os
 import csv
 from collections import defaultdict
@@ -25,8 +23,11 @@ from matplotlib.lines import Line2D
 import seaborn as sns
 import upsetplot
 
+import sourmash
+from sourmash import sourmash_args
 from sourmash.logging import debug_literal, error, notify, print_results
 from sourmash.plugins import CommandLinePlugin
+import sourmash_utils
 
 
 ### utility functions
@@ -925,8 +926,7 @@ class Command_Upset(CommandLinePlugin):
         p.add_argument('-o', '--output-figure', required=True)
         p.add_argument('--truncate-labels-at', default=30, type=int,
                        help="limit labels to this length (default: 30)")
-        p.add_argument('--scaled', type=int, default=1000)
-        p.add_argument('-k', '--ksize', type=int, default=31)
+        sourmash_utils.add_standard_minhash_args(p)
         p.add_argument('--sort-by', default='cardinality',
                        choices=['cardinality', 'degree', '-cardinality', '-degree'],
                        help='sort display by size of intersection, or number of categories intersected')
@@ -954,16 +954,20 @@ class Command_Upset(CommandLinePlugin):
             s = list(iterable)
             return chain.from_iterable(combinations(s, r) for r in range(start, len(s)+1))
 
-        scaled = args.scaled
+        select_mh = sourmash_utils.create_minhash_from_args(args)
+        print(f"selecting sketches: {select_mh}")
+        scaled = select_mh.scaled
 
         siglist = []
         for filename in args.sketches:
-            idx = sourmash.load_file_as_index(filename)
-            idx = idx.select(ksize=args.ksize)
+            print(f"loading sketches from file {filename}")
+            db = sourmash_utils.load_index_and_select(filename, select_mh)
 
-            for ss in idx.signatures():
-                with ss.update() as ss:
-                    ss.minhash = ss.minhash.downsample(scaled=args.scaled)
+            # downsample?
+            for ss in db.signatures():
+                if ss.minhash.scaled != scaled:
+                    with ss.update() as ss:
+                        ss.minhash = ss.minhash.downsample(scaled=scaled)
                 siglist.append(ss)
 
         notify(f"Loaded {len(siglist)} signatures & downsampled to scaled={scaled}")

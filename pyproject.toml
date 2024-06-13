@@ -5,7 +5,7 @@ readme = "README.md"
 requires-python = ">=3.10"
 version = "0.4"
 
-dependencies = ["sourmash>=4.8.8,<5",
+dependencies = ["sourmash>=4.8.8,<5", "sourmash_utils>=0.2",
                 "matplotlib", "numpy", "scipy", "scikit-learn",
                 "seaborn", "upsetplot"]
 
