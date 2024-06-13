@@ -926,9 +926,16 @@ class Command_Upset(CommandLinePlugin):
                        help="limit labels to this length (default: 30)")
         p.add_argument('--scaled', type=int, default=1000)
         p.add_argument('-k', '--ksize', type=int, default=31)
+        p.add_argument('--sort-by', default='cardinality',
+                       choices=['cardinality', 'degree', '-cardinality', '-degree'],
+                       help='sort display by size of intersection, or number of categories intersected')
+        p.add_argument('--min-subset-size', default="0%",
+                       type=str,
+                       help="omit sets below this size or percentage (default: '0%')")
+        p.add_argument('--show-percentages', action="store_true",
+                       help='show percentages on plot')
+
         # add names-from or something @CTB
-        # add min-overlap or something @CTB
-        # look at other args for upsetplot
         # what's going on with left side?
         
     def main(self, args):
@@ -1002,7 +1009,17 @@ class Command_Upset(CommandLinePlugin):
         notify(f"\n...done! {len(nonzero_names)} non-empty intersections of {len(names)} total.")
 
         data = upsetplot.from_memberships(nonzero_names, counts)
-        upsetplot.plot(data)
+
+        try:
+            min_subset_size = float(args.min_subset_size)
+            notify(f"setting min_subset_size={min_subset_size:g} (number)")
+        except ValueError:
+            min_subset_size = args.min_subset_size
+            notify(f"setting min_subset_size='{min_subset_size}' (percentage)")
+
+        upsetplot.plot(data, sort_by=args.sort_by,
+                       min_subset_size=min_subset_size,
+                       show_percentages=args.show_percentages)
 
         notify(f"saving upsetr figure to '{args.output_figure}'")
         plt.savefig(args.output_figure, bbox_inches="tight")
