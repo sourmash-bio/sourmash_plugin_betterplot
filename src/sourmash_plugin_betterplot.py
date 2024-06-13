@@ -932,7 +932,7 @@ class Command_Upset(CommandLinePlugin):
                        help='sort display by size of intersection, or number of categories intersected')
         p.add_argument('--min-subset-size', default="0%",
                        type=str,
-                       help="omit sets below this size or percentage (default: '0%')")
+                       help="omit sets below this size or percentage (default: '0%%')")
         p.add_argument('--show-percentages', action="store_true",
                        help='show percentages on plot')
         p.add_argument('--save-intersections-to-file', default=None,
