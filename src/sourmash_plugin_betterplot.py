@@ -7,12 +7,11 @@ Need help? Have questions? Ask at http://github.com/sourmash-bio/sourmash/issues
 
 import sys
 import argparse
-import sourmash
-from sourmash import sourmash_args
 import os
 import csv
 from collections import defaultdict
 from itertools import chain, combinations
+import pickle
 
 import numpy
 import pylab
@@ -24,8 +23,11 @@ from matplotlib.lines import Line2D
 import seaborn as sns
 import upsetplot
 
+import sourmash
+from sourmash import sourmash_args
 from sourmash.logging import debug_literal, error, notify, print_results
 from sourmash.plugins import CommandLinePlugin
+import sourmash_utils
 
 
 ### utility functions
@@ -924,13 +926,25 @@ class Command_Upset(CommandLinePlugin):
         p.add_argument('-o', '--output-figure', required=True)
         p.add_argument('--truncate-labels-at', default=30, type=int,
                        help="limit labels to this length (default: 30)")
-        p.add_argument('--scaled', type=int, default=1000)
-        p.add_argument('-k', '--ksize', type=int, default=31)
-        # add names-from or something @CTB
-        # add min-overlap or something @CTB
-        # look at other args for upsetplot
-        # what's going on with left side?
-        
+        sourmash_utils.add_standard_minhash_args(p)
+        p.add_argument('--sort-by', default='cardinality',
+                       choices=['cardinality', 'degree', '-cardinality', '-degree'],
+                       help='sort display by size of intersection, or number of categories intersected')
+        p.add_argument('--min-subset-size', default="0%",
+                       type=str,
+                       help="omit sets below this size or percentage (default: '0%%')")
+        p.add_argument('--show-percentages', action="store_true",
+                       help='show percentages on plot')
+        p.add_argument('--save-intersections-to-file', default=None,
+                       help='save intersections to a file, to avoid expensive recalculations')
+        p.add_argument('--load-intersections-from-file', default=None,
+                       help='load precalculated intersections from a file')
+
+#        p.add_argument('--save-names-to-file', default=None,
+#                       help='save set names to a file, for editing & customization')
+#        p.add_argument('--load-names-from-file', default=None,
+#                       help='load set names from a file to customize plots')
+
     def main(self, args):
         super().main(args)
 
@@ -940,16 +954,20 @@ class Command_Upset(CommandLinePlugin):
             s = list(iterable)
             return chain.from_iterable(combinations(s, r) for r in range(start, len(s)+1))
 
-        scaled = args.scaled
+        select_mh = sourmash_utils.create_minhash_from_args(args)
+        print(f"selecting sketches: {select_mh}")
+        scaled = select_mh.scaled
 
         siglist = []
         for filename in args.sketches:
-            idx = sourmash.load_file_as_index(filename)
-            idx = idx.select(ksize=args.ksize)
+            print(f"loading sketches from file {filename}")
+            db = sourmash_utils.load_index_and_select(filename, select_mh)
 
-            for ss in idx.signatures():
-                with ss.update() as ss:
-                    ss.minhash = ss.minhash.downsample(scaled=args.scaled)
+            # downsample?
+            for ss in db.signatures():
+                if ss.minhash.scaled != scaled:
+                    with ss.update() as ss:
+                        ss.minhash = ss.minhash.downsample(scaled=scaled)
                 siglist.append(ss)
 
         notify(f"Loaded {len(siglist)} signatures & downsampled to scaled={scaled}")
@@ -979,30 +997,85 @@ class Command_Upset(CommandLinePlugin):
         names = [ get_name(combo) for combo in pset ]
         notify(f"powerset of distinct combinations: {len(pset)}")
 
-        notify(f"generating intersections...")
-        counts = []
-        nonzero_names = []
-        subtract_me = set()
-        for n, combo in enumerate(pset):
-            if n and n % 10 == 0:
-                notify(f"...{n} of {len(pset)}", end="\r")
+        # CTB: maybe turn the intersection code below into a class?
 
-            combo = list(combo)
-            ss = combo.pop()
-            hashes = set(ss.minhash.hashes) - subtract_me
+        if args.load_intersections_from_file:
+            notify(f"loading intersections from '{args.load_intersections_from_file}'")
+            with open(args.load_intersections_from_file, 'rb') as fp:
+                check_names, nonzero_names, counts = pickle.load(fp)
 
-            while combo and hashes:
+            # confirm!
+            if check_names != names:
+                error("ERROR: saved intersections do not match provided sketches!?")
+                sys.exit(-1)
+        else:
+            notify(f"generating intersections...")
+            counts = []
+            nonzero_names = []
+            subtract_me = set()
+            for n, combo in enumerate(pset):
+                if n and n % 10 == 0:
+                    notify(f"...{n} of {len(pset)}", end="\r")
+
+                combo = list(combo)
                 ss = combo.pop()
-                hashes.intersection_update(ss.minhash.hashes)
+                hashes = set(ss.minhash.hashes) - subtract_me
 
-            if hashes:
-                counts.append(len(hashes) * scaled)
-                nonzero_names.append(names[n])
-                subtract_me.update(hashes)
-        notify(f"\n...done! {len(nonzero_names)} non-empty intersections of {len(names)} total.")
+                while combo and hashes:
+                    ss = combo.pop()
+                    hashes.intersection_update(ss.minhash.hashes)
+
+                if hashes:
+                    counts.append(len(hashes) * scaled)
+                    nonzero_names.append(names[n])
+                    subtract_me.update(hashes)
+            notify(f"\n...done! {len(nonzero_names)} non-empty intersections of {len(names)} total.")
+
+            # maybe decrease memory, but also prevent re/mis-use of these :)
+            del subtract_me
+            del hashes
+#            del names
+
+            if args.save_intersections_to_file:
+                notify(f"saving intersections to '{args.save_intersections_to_file}'")
+                with open(args.save_intersections_to_file, 'wb') as fp:
+                    pickle.dump((names, nonzero_names, counts), fp)
+
+#        if args.save_names_to_file:
+#            with open(args.save_names_to_file, 'w', newline='') as fp:
+#                w = csv.writer(fp)
+#                w.writerow(['sort_order', 'name'])
+#                for n, name in enumerate(names):
+#                    w.writerow([n, name])
+#            notify(f"saved {len(names)} names to '{args.save_names_to_file}'")
+
+#        if args.load_names_from_file:
+#            with open(args.load_names_from_file, 'r', newline='') as fp:
+#                r = csv.DictReader(fp)
+#                rows = list(r)
+#                if 'sort_order' not in rows[0].keys():
+#                    error("'sort_order' must be a column in names file '{args.load_names_from_file}'")
+#                if 'name' not in rows[0].keys():
+#                    error("'name' must be a column in names file '{args.load_names_from_file}'")
+#
+#                rows.sort(key=lambda x: int(x["sort_order"]))
+#                names = [ row["name"] for row in rows ]
+#            notify("loaded {len(names)} names from '{args.load_names_from_file}'")
+
+        ## now! calculate actual data for upsetplot...
 
         data = upsetplot.from_memberships(nonzero_names, counts)
-        upsetplot.plot(data)
+
+        try:
+            min_subset_size = float(args.min_subset_size)
+            notify(f"setting min_subset_size={min_subset_size:g} (number)")
+        except ValueError:
+            min_subset_size = args.min_subset_size
+            notify(f"setting min_subset_size='{min_subset_size}' (percentage)")
+
+        upsetplot.plot(data, sort_by=args.sort_by,
+                       min_subset_size=min_subset_size,
+                       show_percentages=args.show_percentages)
 
         notify(f"saving upsetr figure to '{args.output_figure}'")
         plt.savefig(args.output_figure, bbox_inches="tight")
