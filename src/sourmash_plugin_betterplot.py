@@ -515,6 +515,12 @@ class Command_PairwiseToMatrix(CommandLinePlugin):
         )
         subparser.add_argument("-o", "--output-matrix", required=True)
         subparser.add_argument("--labels-to")
+        subparser.add_argument(
+            "-u",
+            "--use-column",
+            default="jaccard",
+            help="column name to use in matrix (default: jaccard)",
+        )
 
     def main(self, args):
         super().main(args)
@@ -527,6 +533,7 @@ class Command_PairwiseToMatrix(CommandLinePlugin):
         notify(f"loaded {len(rows)} rows containing {len(sample_d)} distinct samples")
 
         mat = numpy.zeros((len(sample_d), len(sample_d)))
+        colname = args.use_column
 
         for row in rows:
             # get unique indices for each query/match pair.
@@ -534,7 +541,7 @@ class Command_PairwiseToMatrix(CommandLinePlugin):
             qi = sample_d[q]
             m = row["match_name"]
             mi = sample_d[m]
-            jaccard = float(row["jaccard"])
+            jaccard = float(row[colname])
 
             mat[qi, mi] = jaccard
             mat[mi, qi] = jaccard
