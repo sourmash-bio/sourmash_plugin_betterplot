@@ -192,6 +192,9 @@ sourmash scripts mds 10sketches.cmp 10sketches.cmp.labels_to.csv \
 produces this plot:
 ![10-sketches plotted using MDS](examples/mds.10sketches.cmp.png)
 
+By default this command generates a metric MDS plot.  You can generate
+a non-metric (NMDS) plot with `--nmds`.
+
 ### `mds2` - multidimensional Scaling (MDS) plot from `pairwise` output
 
 Use MDS to display a sparse comparison created using the
@@ -214,6 +217,9 @@ sourmash scripts mds 10sketches.cmp \
 
 produces this plot:
 ![10-sketches plotted using MDS2](examples/mds2.10sketches.cmp.png)
+
+By default this command generates a metric MDS plot.  You can generate
+a non-metric (NMDS) plot with `--nmds`.
 
 ### `cluster_to_categories` - convert clusters from `cluster` into categories
 
@@ -366,6 +372,20 @@ sourmash scripts upset 10sketches.sig.zip -o 10sketches.upset.png
 produces:
 
 ![upset plot of 10 sketches intersections](examples/10sketches.upset.png)
+
+### `venn` - plot 2- or 3-way sketch intersections using Venn diagrams
+
+Plot a Venn diagram of the intersections between two or three sketches.
+
+This command:
+```
+sourmash scripts venn sketches/{2,47,63}.sig.zip \
+    -o 3sketches.venn.png --ident
+```
+
+produces:
+
+![venn diagram of 3 sketches intersections](examples/3sketches.venn.png)
 
 ## Support
 
