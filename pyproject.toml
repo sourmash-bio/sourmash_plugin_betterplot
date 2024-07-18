@@ -7,7 +7,7 @@ version = "0.4.2"
 
 dependencies = ["sourmash>=4.8.8,<5", "sourmash_utils>=0.2",
                 "matplotlib", "numpy", "scipy", "scikit-learn",
-                "seaborn", "upsetplot"]
+                "seaborn", "upsetplot", "matplotlib_venn"]
 
 [metadata]
 license = { text = "BSD 3-Clause License" }
@@ -23,3 +23,4 @@ upset_command = "sourmash_plugin_betterplot:Command_Upset"
 cluster_to_categories_command = "sourmash_plugin_betterplot:Command_ClusterToCategories"
 tsne_command = "sourmash_plugin_betterplot:Command_TSNE"
 tsne2_command = "sourmash_plugin_betterplot:Command_TSNE2"
+venn = "sourmash_plugin_betterplot:Command_Venn"

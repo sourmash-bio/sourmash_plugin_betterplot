@@ -16,6 +16,7 @@ import pickle
 import numpy
 import pylab
 import matplotlib.pyplot as plt
+from matplotlib_venn import venn2, venn3
 import scipy.cluster.hierarchy as sch
 from sklearn.manifold import MDS, TSNE
 from scipy.sparse import lil_matrix, csr_matrix
@@ -28,6 +29,7 @@ from sourmash import sourmash_args
 from sourmash.logging import debug_literal, error, notify, print_results
 from sourmash.plugins import CommandLinePlugin
 import sourmash_utils
+from sourmash.cli.utils import (add_ksize_arg, add_moltype_args)
 
 
 ### utility functions
@@ -1308,3 +1310,164 @@ class Command_ClusterToCategories(CommandLinePlugin):
                 for ident in notfound:
                     name = ident_d[ident]
                     w.writerow([name, 'unclustered'])
+
+
+def set_size(x):
+    return len(x)
+
+
+def _venn2_sizes(a, b):
+    return (set_size(a - b), set_size(b - a), set_size(a & b))
+
+
+def _venn3_sizes(a, b, c):
+    return (
+        set_size(
+            a - (b | c)
+        ),  # TODO: This is certainly not the most efficient way to compute.
+        set_size(b - (a | c)),
+        set_size((a & b) - c),
+        set_size(c - (a | b)),
+        set_size((a & c) - b),
+        set_size((b & c) - a),
+        set_size(a & b & c),
+    )
+
+def set_venn_label(v, loc, label):
+    x = v.get_label_by_id(loc)
+    if x is not None:
+        x.set_text(label)
+
+
+def format_bp(bp):
+    "Pretty-print bp information."
+    bp = float(bp)
+    if bp < 500:
+        return f"{bp:.0f} bp"
+    elif bp <= 500e3:
+        return f"{round(bp / 1e3, 1):.1f} kbp"
+    elif bp < 500e6:
+        return f"{round(bp / 1e6, 1):.1f} Mbp"
+    elif bp < 500e9:
+        return f"{round(bp / 1e9, 1):.1f} Gbp"
+    return "???"
+
+
+class Command_Venn(CommandLinePlugin):
+    command = 'venn'
+    description = """\
+create and write out a pairwise or three-way Venn set overlap diagram.
+
+Calculate and display overlaps between two or three sourmash sketches.
+
+'venn' provides figure output.
+"""
+
+    usage = """
+   sourmash scripts venn -k 31 <sketches>
+"""
+    epilog = epilog
+    formatter_class = argparse.RawTextHelpFormatter
+
+    def __init__(self, subparser):
+        super().__init__(subparser)
+        # add argparse arguments here.
+        debug_literal('RUNNING cmd venn __init__')
+        subparser.add_argument('sketches', nargs='+',
+                               help="file(s) containing two or three sketches")
+        subparser.add_argument('-o', '--output', default=None,
+                               help="save Venn diagram image to this file",
+                               required=True)
+        subparser.add_argument('--name1', default=None,
+                               help="override name for first sketch")
+        subparser.add_argument('--name2', default=None,
+                               help="override name for second sketch")
+        subparser.add_argument('--name3', default=None,
+                               help="override name for (optional) third sketch")
+        subparser.add_argument('--ident', action='store_true',
+                               help="use first space-separated identifier for sequence name")
+        add_ksize_arg(subparser)
+        add_moltype_args(subparser)
+
+    def main(self, args):
+        # code that we actually run.
+        super().main(args)
+        moltype = sourmash_args.calculate_moltype(args)
+
+        debug_literal(f'RUNNING cmd {self} {args}')
+
+        sketch_files = list(args.sketches)
+
+        sketches = []
+        for filename in sketch_files:
+            notify(f"Loading sketches from {filename}")
+            x = list(sourmash.load_file_as_signatures(filename,
+                                                      ksize=args.ksize,
+                                                      select_moltype=moltype))
+            notify(f"...loaded {len(x)} sketches from {filename}.")
+            sketches.extend(x)
+
+        if not len(sketches):
+            error("ERROR: no sketches found. Must supply 2 or 3.")
+            sys.exit(-1)
+        elif len(sketches) == 1:
+            error("ERROR: only found one sketch. Must supply 2 or 3.")
+            sys.exit(-1)
+        elif len(sketches) > 3:
+            error("ERROR: found more than three sketches. Must supply 2 or 3.")
+            sys.exit(-1)
+
+        mh1 = sketches[0].minhash
+        mh2 = sketches[1].minhash
+        assert mh1.scaled == mh2.scaled
+
+        hashes1 = set(mh1.hashes)
+        hashes2 = set(mh2.hashes)
+
+        label1 = args.name1
+        if not label1:
+            label1 = sketches[0].name
+            if args.ident:
+                label1 = sketches[0].name.split(' ')[0]
+
+        label2 = args.name2
+        if not label2:
+            label2 = sketches[1].name
+            if args.ident:
+                label2 = sketches[1].name.split(' ')[0]
+
+        if len(sketches) == 2:
+            notify("found two sketches - outputting a 2-part Venn diagram.")
+            sizes = _venn2_sizes(hashes1, hashes2)
+            sizes = [ size * mh1.scaled for size in sizes ]
+            v = venn2(sizes, set_labels=(label1, label2))
+            set_venn_label(v, '10', format_bp(sizes[0]))
+            set_venn_label(v, '01', format_bp(sizes[1]))
+            set_venn_label(v, '11', format_bp(sizes[2]))
+
+        elif len(sketches) == 3:
+            notify("found three sketches - outputting a 3-part Venn diagram.")
+            mh3 = sketches[2].minhash
+            assert mh1.scaled == mh3.scaled
+
+            hashes3 = set(mh3.hashes)
+            label3 = args.name3
+            if not label3:
+                label3 = sketches[2].name
+                if args.ident:
+                    label3 = sketches[2].name.split(' ')[0]
+
+            sizes = _venn3_sizes(hashes1, hashes2, hashes3)
+            sizes = [ size * mh1.scaled for size in sizes ]
+            v = venn3(sizes, set_labels=(label1, label2, label3))
+            set_venn_label(v, '100', format_bp(sizes[0]))
+            set_venn_label(v, '010', format_bp(sizes[1]))
+            set_venn_label(v, '110', format_bp(sizes[2]))
+            set_venn_label(v, '001', format_bp(sizes[3]))
+            set_venn_label(v, '101', format_bp(sizes[4]))
+            set_venn_label(v, '011', format_bp(sizes[5]))
+            set_venn_label(v, '111', format_bp(sizes[6]))
+
+        if args.output:
+            notify(f"saving to '{args.output}'")
+            pylab.savefig(args.output)
