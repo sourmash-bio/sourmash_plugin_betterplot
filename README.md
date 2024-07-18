@@ -373,6 +373,20 @@ produces:
 
 ![upset plot of 10 sketches intersections](examples/10sketches.upset.png)
 
+### `venn` - plot 2- or 3-way sketch intersections using Venn diagrams
+
+Plot a Venn diagram of the intersections between two or three sketches.
+
+This command:
+```
+sourmash scripts venn sketches/{2,47,63}.sig.zip \
+    -o 3sketches.venn.png
+```
+
+produces:
+
+![venn diagram of 3 sketches intersections](examples/3sketches.venn.png)
+
 ## Support
 
 We suggest filing issues in [the main sourmash issue tracker](https://github.com/dib-lab/sourmash/issues) as that receives more attention!

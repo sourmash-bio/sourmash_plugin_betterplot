@@ -15,6 +15,7 @@ rule all:
         "10sketches.upset.png",
         "tsne.64sketches.cmp.png",
         "tsne2.64sketches.cmp.png",
+        "3sketches.venn.png",
 
 rule cmp_3sketches:
     input:
@@ -253,3 +254,13 @@ rule upset_10sketches:
     shell: """
         sourmash scripts upset {input.sigs} -o {output.fig}
     """
+
+rule venn_3sketches:
+    input:
+        expand("sketches/{n}.sig.zip", n=sketches_3)
+    output:
+        png="3sketches.venn.png",
+    shell: """
+        sourmash scripts venn {input} -o {output}
+    """
+    
