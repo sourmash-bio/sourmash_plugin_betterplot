@@ -192,6 +192,9 @@ sourmash scripts mds 10sketches.cmp 10sketches.cmp.labels_to.csv \
 produces this plot:
 ![10-sketches plotted using MDS](examples/mds.10sketches.cmp.png)
 
+By default this command generates a metric MDS plot.  You can generate
+a non-metric (NMDS) plot with `--nmds`.
+
 ### `mds2` - multidimensional Scaling (MDS) plot from `pairwise` output
 
 Use MDS to display a sparse comparison created using the
@@ -214,6 +217,9 @@ sourmash scripts mds 10sketches.cmp \
 
 produces this plot:
 ![10-sketches plotted using MDS2](examples/mds2.10sketches.cmp.png)
+
+By default this command generates a metric MDS plot.  You can generate
+a non-metric (NMDS) plot with `--nmds`.
 
 ### `cluster_to_categories` - convert clusters from `cluster` into categories
 

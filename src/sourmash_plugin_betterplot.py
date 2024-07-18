@@ -443,8 +443,9 @@ def plot2(args):
                     w.writerow(row)
 
 
-def plot_mds(matrix, *, colors=None, category_map=None):
-    mds = MDS(n_components=2, dissimilarity="precomputed", random_state=42)
+def plot_mds(matrix, *, colors=None, category_map=None, metric=True):
+    mds = MDS(n_components=2, dissimilarity="precomputed", random_state=42,
+              metric=metric)
     mds_coords = mds.fit_transform(matrix)
     plt.scatter(mds_coords[:, 0], mds_coords[:, 1], color=colors)
     plt.xlabel("Dimension 1")
@@ -478,9 +479,20 @@ class Command_MDS(CommandLinePlugin):
             "-C", "--categories-csv", help="CSV mapping label columns to categories"
         )
         subparser.add_argument("-o", "--output-figure", required=True)
+        subparser.add_argument("--metric", dest="metric", default=True,
+                               action="store_true",
+                               help="compute MDS (metric) - the default")
+        subparser.add_argument("--nmds", dest="metric",
+                               action="store_false",
+                               help="compute NMDS (non-metric)")
 
     def main(self, args):
         super().main(args)
+
+        if args.metric:
+            notify(f"building metric plot (MDS)")
+        else:
+            notify(f"building non-metric plot (NMDS)")
 
         with open(args.comparison_matrix, "rb") as f:
             mat = numpy.load(f)
@@ -494,7 +506,8 @@ class Command_MDS(CommandLinePlugin):
             category_map, colors = load_categories_csv(args.categories_csv, labelinfo)
 
         dissim = 1 - mat
-        plot_mds(dissim, colors=colors, category_map=category_map)
+        plot_mds(dissim, colors=colors, category_map=category_map,
+                 metric=args.metric)
 
         notify(f"writing figure to '{args.output_figure}'")
         plt.savefig(args.output_figure)
@@ -583,9 +596,20 @@ class Command_MDS2(CommandLinePlugin):
             "-C", "--categories-csv", help="CSV mapping label columns to categories"
         )
         subparser.add_argument("-o", "--output-figure", required=True)
+        subparser.add_argument("--metric", dest="metric", default=True,
+                               action="store_true",
+                               help="compute MDS (metric) - the default")
+        subparser.add_argument("--nmds", dest="metric",
+                               action="store_false",
+                               help="compute NMDS (non-metric)")
 
     def main(self, args):
         super().main(args)
+
+        if args.metric:
+            notify(f"building metric plot (MDS)")
+        else:
+            notify(f"building non-metric plot (NMDS)")
 
         with sourmash_args.FileInputCSV(args.pairwise_csv) as r:
             rows = list(r)
@@ -619,7 +643,8 @@ class Command_MDS2(CommandLinePlugin):
             )
 
         dissim = 1 - mat
-        plot_mds(dissim, colors=colors, category_map=category_map)
+        plot_mds(dissim, colors=colors, category_map=category_map,
+                 metric=args.metric)
 
         notify(f"writing figure to '{args.output_figure}'")
         plt.savefig(args.output_figure)
