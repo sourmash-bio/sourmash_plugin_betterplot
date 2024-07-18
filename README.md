@@ -380,7 +380,7 @@ Plot a Venn diagram of the intersections between two or three sketches.
 This command:
 ```
 sourmash scripts venn sketches/{2,47,63}.sig.zip \
-    -o 3sketches.venn.png
+    -o 3sketches.venn.png --ident
 ```
 
 produces:

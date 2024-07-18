@@ -261,6 +261,6 @@ rule venn_3sketches:
     output:
         png="3sketches.venn.png",
     shell: """
-        sourmash scripts venn {input} -o {output}
+        sourmash scripts venn {input} -o {output} --ident
     """
     
