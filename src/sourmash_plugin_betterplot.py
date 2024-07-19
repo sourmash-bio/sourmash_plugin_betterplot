@@ -846,6 +846,14 @@ class Command_Clustermap1(CommandLinePlugin):
             "--no-labels", action="store_true",
             help="disable X & Y axis labels"
         )
+        subparser.add_argument(
+            "--no-x-labels", action="store_true",
+            help="disable X axis labels"
+        )
+        subparser.add_argument(
+            "--no-y-labels", action="store_true",
+            help="disable Y axis labels"
+        )
 
     def main(self, args):
         super().main(args)
@@ -901,12 +909,15 @@ class Command_Clustermap1(CommandLinePlugin):
         if args.boolean:        # turn off colorbar if boolean.
             kw_args['cbar_pos'] = None
 
+        yticklabels=sample_d_to_idents(query_d_items)
+        xticklabels=sample_d_to_idents(against_d_items)
         if args.no_labels:
-            xticklabels=[]
-            yticklabels=[]
-        else:
-            yticklabels=sample_d_to_idents(query_d_items)
-            xticklabels=sample_d_to_idents(against_d_items)
+            xticklabels = []
+            yticklabels = []
+        elif args.no_x_labels:
+            xticklabels = []
+        elif args.no_y_labels:
+            yticklabels = []
 
         # turn into dissimilarity matrix
         # plot!
