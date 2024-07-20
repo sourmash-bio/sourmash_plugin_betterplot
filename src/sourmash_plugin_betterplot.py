@@ -23,6 +23,7 @@ from scipy.sparse import lil_matrix, csr_matrix
 from matplotlib.lines import Line2D
 import seaborn as sns
 import upsetplot
+import pandas as pd
 
 import sourmash
 from sourmash import sourmash_args
@@ -1482,3 +1483,59 @@ Calculate and display overlaps between two or three sourmash sketches.
         if args.output:
             notify(f"saving to '{args.output}'")
             pylab.savefig(args.output)
+
+
+class Command_PresenceFilter(CommandLinePlugin):
+    command = 'presence_filter'
+    description = """\
+Provide a filtered view of 'gather' output, plotting detection or ANI
+against average abund for significant matches.
+"""
+
+    usage = """
+   sourmash scripts presence_filter gather.csv -o presence.png
+"""
+    epilog = epilog
+    formatter_class = argparse.RawTextHelpFormatter
+
+    def __init__(self, subparser):
+        super().__init__(subparser)
+        # add argparse arguments here.
+        subparser.add_argument('gather_csv')
+        subparser.add_argument('-o', '--output', default=None,
+                               help="save image to this file",
+                               required=True)
+        subparser.add_argument('-N', '--min-num-hashes',
+                               default=3, help='threshold (default: 3)')
+        subparser.add_argument('--detection', action="store_true",
+                               default=True)
+        subparser.add_argument('--ani', dest='detection',
+                               action="store_false")
+
+    def main(self, args):
+        df = pd.read_csv(args.gather_csv)
+        notify(f"loaded {len(df)} rows from '{args.gather_csv}'")
+
+        scaled = set(df['scaled'])
+        assert len(scaled) == 1
+        scaled = list(scaled)[0]
+
+        threshold = args.min_num_hashes * scaled
+        df = df[df['unique_intersect_bp'] >= threshold]
+        notify(f"filtered down to {len(df)} rows with unique_intersect_bp >= {threshold}")
+
+        if args.detection:
+            plt.plot(df.f_match_orig, df.average_abund, '.')
+        else:
+            plt.plot(df.match_containment_ani, df.average_abund, '.')
+        ax = plt.gca()
+        ax.set_ylabel('number of copies')
+        ax.set_yscale('log')
+
+        if args.detection:
+            ax.set_xlabel('fraction of genome detected')
+        else:
+            ax.set_xlabel('cANI of match')
+
+        notify(f"saving figure to '{args.output}'")
+        plt.savefig(args.output)
