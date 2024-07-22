@@ -9,7 +9,7 @@ import sys
 import argparse
 import os
 import csv
-from collections import defaultdict
+from collections import defaultdict, Counter
 from itertools import chain, combinations
 import pickle
 
@@ -1018,6 +1018,15 @@ class Command_Upset(CommandLinePlugin):
 
         notify(f"Loaded {len(siglist)} signatures & downsampled to scaled={scaled}")
 
+        names_check = [ ss.name for ss in siglist ]
+        if len(set(names_check)) != len(names_check):
+            notify("ERROR: duplicate names or sketches; please fix!!")
+            cnt = Counter(names_check)
+            for k, v in cnt.most_common():
+                if v > 1:
+                    print(f"\t* {k} shows up {v} times")
+            sys.exit(-1)
+
         # @CTB: check scaled, ksize, etc.
 
         if not siglist:
@@ -1041,6 +1050,7 @@ class Command_Upset(CommandLinePlugin):
         truncate_name = lambda x: x[:truncate_at-3] + '...' if len(x) >= truncate_at else x
         get_name = lambda x: [ truncate_name(ss.name) for ss in x ]
         names = [ get_name(combo) for combo in pset ]
+
         notify(f"powerset of distinct combinations: {len(pset)}")
 
         # CTB: maybe turn the intersection code below into a class?
@@ -1511,6 +1521,12 @@ against average abund for significant matches.
                                default=True)
         subparser.add_argument('--ani', dest='detection',
                                action="store_false")
+        subparser.add_argument('--green-color',
+                               help="color genomes with matching names green")
+        subparser.add_argument('--red-color',
+                               help="color genomes with matching names red")
+        subparser.add_argument('--blue-color',
+                               help="color genomes with matching names blue")
 
     def main(self, args):
         df = pd.read_csv(args.gather_csv)
@@ -1525,9 +1541,35 @@ against average abund for significant matches.
         notify(f"filtered down to {len(df)} rows with unique_intersect_bp >= {threshold}")
 
         if args.detection:
-            plt.plot(df.f_match_orig, df.average_abund, '.')
+            plt.plot(df.f_match_orig, df.average_abund, 'k.')
         else:
-            plt.plot(df.match_containment_ani, df.average_abund, '.')
+            plt.plot(df.match_containment_ani, df.average_abund, 'k.')
+
+        dfs = []
+        colors = []
+        if args.green_color:
+            df2 = df[df['match_name'].str.contains(args.green_color)]
+            notify(f"{len(df2)} matches to {args.green_color} => green circles")
+            dfs.append(df2)
+            colors.append('go')
+         if args.red_color:
+            df2 = df[df['match_name'].str.contains(args.red_color)]
+            notify(f"{len(df2)} matches to {args.red_color} => red crosses")
+
+            dfs.append(df2)
+            colors.append('r+')
+        if args.blue_color:
+            df2 = df[df['match_name'].str.contains(args.blue_color)]
+            notify(f"{len(df2)} matches to {args.blue_color} => blue triangles")
+            dfs.append(df2)
+            colors.append('bv')
+
+        for (df2, color) in zip(dfs, colors):
+            if args.detection:
+                plt.plot(df2.f_match_orig, df2.average_abund, color)
+            else:
+                plt.plot(df2.match_containment_ani, df2.average_abund, color)
+
         ax = plt.gca()
         ax.set_ylabel('number of copies')
         ax.set_yscale('log')
