@@ -1552,7 +1552,7 @@ against average abund for significant matches.
             notify(f"{len(df2)} matches to {args.green_color} => green circles")
             dfs.append(df2)
             colors.append('go')
-         if args.red_color:
+        if args.red_color:
             df2 = df[df['match_name'].str.contains(args.red_color)]
             notify(f"{len(df2)} matches to {args.red_color} => red crosses")
 
