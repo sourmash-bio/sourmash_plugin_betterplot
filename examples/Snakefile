@@ -17,14 +17,14 @@ rule all:
         "tsne2.64sketches.cmp.png",
         "3sketches.venn.png",
 
-rule make_10sketches:
-    input:
-        expand("sketches/{n}.sig.zip", n=sketches_10)
-    output:
-        "10sketches.sig.zip"
-    shell: """
-        sourmash sig cat {input} -o {output}
-    """
+#rule make_10sketches:
+#    input:
+#        expand("sketches/{n}.sig.zip", n=sketches_10)
+#    output:
+#        "10sketches.sig.zip"
+#    shell: """
+#        sourmash sig cat {input} -o {output}
+#    """
 
 rule cmp_3sketches:
     input:
