@@ -1,0 +1,65 @@
+sort_order,md5,label,name,filename,signature_file
+1,324074c7287ed934af4fd0a6a459aa30,"CP001472.1 Acidobacterium capsulatum ATCC 51196, complete genome","CP001472.1 Acidobacterium capsulatum ATCC 51196, complete genome",0.fa,64sketches.sig.zip
+2,c11126d0591db94cd3d1c8568499375f,"CP001941.1 Aciduliprofundum boonei T469, complete genome","CP001941.1 Aciduliprofundum boonei T469, complete genome",1.fa,64sketches.sig.zip
+3,f3a90d4e5528864a5bcc8434b0d0c3b1,"CP001071.1 Akkermansia muciniphila ATCC BAA-835, complete genome","CP001071.1 Akkermansia muciniphila ATCC BAA-835, complete genome",2.fa,64sketches.sig.zip
+4,cee0a3fb7b00990a22be02b2b0a78418,"AE000782.1 Archaeoglobus fulgidus DSM 4304, complete genome","AE000782.1 Archaeoglobus fulgidus DSM 4304, complete genome",3.fa,64sketches.sig.zip
+5,56ceec3045e833db30db8ad16969ff16,"AE015928.1 Bacteroides thetaiotaomicron VPI-5482, complete genome","AE015928.1 Bacteroides thetaiotaomicron VPI-5482, complete genome",4.fa,64sketches.sig.zip
+6,960cc77fc7b96d595712107aaa1524b5,"CP000139.1 Bacteroides vulgatus ATCC 8482, complete genome","CP000139.1 Bacteroides vulgatus ATCC 8482, complete genome",5.fa,64sketches.sig.zip
+7,a86d20c0c746f8cd8628aaabf8e45221,"NZ_JGWU01000001.1 Bordetella bronchiseptica D989 ctg7180000008197, whole genome shotgun sequence","NZ_JGWU01000001.1 Bordetella bronchiseptica D989 ctg7180000008197, whole genome shotgun sequence",6.fa,64sketches.sig.zip
+8,ee9cb05018009af43429e83e7d502a0a,"NC_007951.1 Burkholderia xenovorans LB400 chromosome 1, complete sequence","NC_007951.1 Burkholderia xenovorans LB400 chromosome 1, complete sequence",7.fa,64sketches.sig.zip
+9,8951157d23d89e5767ac5c7752d251d7,"CP000679.1 Caldicellulosiruptor saccharolyticus DSM 8903, complete genome","CP000679.1 Caldicellulosiruptor saccharolyticus DSM 8903, complete genome",8.fa,64sketches.sig.zip
+10,ee3dae19cbfe2e33299ef8e45c983f17,"NZ_FWDH01000003.1 Caldicellulosiruptor bescii strain MACB1021, whole genome shotgun sequence","NZ_FWDH01000003.1 Caldicellulosiruptor bescii strain MACB1021, whole genome shotgun sequence",9.fa,64sketches.sig.zip
+11,289407dcc3b5ed86aac3e60ea778049e,"CP001097.1 Chlorobium limicola DSM 245, complete genome","CP001097.1 Chlorobium limicola DSM 245, complete genome",10.fa,64sketches.sig.zip
+12,9902df09c49eae79932ef40dccd508d7,"CP000492.1 Chlorobium phaeobacteroides DSM 266, complete genome","CP000492.1 Chlorobium phaeobacteroides DSM 266, complete genome",11.fa,64sketches.sig.zip
+13,33d6fc5ba0f518b036e13135976c5f43,"CP000607.1 Chlorobium phaeovibrioides DSM 265, complete genome","CP000607.1 Chlorobium phaeovibrioides DSM 265, complete genome",12.fa,64sketches.sig.zip
+14,d49c2de1c1a924d92e841802e1c57c93,"AE006470.1 Chlorobium tepidum TLS, complete genome","AE006470.1 Chlorobium tepidum TLS, complete genome",13.fa,64sketches.sig.zip
+15,dfa50aeabf6119ce79f0df1cf8158008,"CP000909.1 Chloroflexus aurantiacus J-10-fl, complete genome","CP000909.1 Chloroflexus aurantiacus J-10-fl, complete genome",14.fa,64sketches.sig.zip
+16,f16ed0263d531574f7b8c00b25abb975,"CP000568.1 Clostridium thermocellum ATCC 27405, complete genome","CP000568.1 Clostridium thermocellum ATCC 27405, complete genome",15.fa,64sketches.sig.zip
+17,782ec0d7017df4830e1fd7cbe7fbca37,"NZ_CP015081.1 Deinococcus radiodurans R1 chromosome 1, complete sequence","NZ_CP015081.1 Deinococcus radiodurans R1 chromosome 1, complete sequence",16.fa,64sketches.sig.zip
+18,4f6060905463539fc92cb5ee67552db5,"NC_008751.1 Desulfovibrio vulgaris DP4, complete genome","NC_008751.1 Desulfovibrio vulgaris DP4, complete genome",17.fa,64sketches.sig.zip
+19,85e27bbbee2de4bc1b92fdf87495eb2e,"CP001251.1 Dictyoglomus turgidum DSM 6724, complete genome","CP001251.1 Dictyoglomus turgidum DSM 6724, complete genome",18.fa,64sketches.sig.zip
+20,b6f8514330c2d92fe0ae9337e1111bb4,"NZ_KE136524.1 Enterococcus faecalis V583 acyDH-supercont2.1, whole genome shotgun sequence","NZ_KE136524.1 Enterococcus faecalis V583 acyDH-supercont2.1, whole genome shotgun sequence",19.fa,64sketches.sig.zip
+21,6bc96e59f0031a59f071c6cdd552c4d1,"AE009951.2 Fusobacterium nucleatum subsp. nucleatum ATCC 25586, complete genome","AE009951.2 Fusobacterium nucleatum subsp. nucleatum ATCC 25586, complete genome",20.fa,64sketches.sig.zip
+22,f3b3f1fde1daf747380e5c34717b290f,"AP009153.1 Gemmatimonas aurantiaca T-27 DNA, complete genome","AP009153.1 Gemmatimonas aurantiaca T-27 DNA, complete genome",21.fa,64sketches.sig.zip
+23,d912c0d77ba5f8a7f45a01de0ce478e4,"AE017180.2 Geobacter sulfurreducens PCA, complete genome","AE017180.2 Geobacter sulfurreducens PCA, complete genome",22.fa,64sketches.sig.zip
+24,f299f676fc8922337c2c5d4c7d12e93a,"NC_013968.1 Haloferax volcanii DS2 plasmid pHV1, complete sequence","NC_013968.1 Haloferax volcanii DS2 plasmid pHV1, complete sequence",23.fa,64sketches.sig.zip
+25,5165e0f27ae96c8a78da00c2d30a8e36,"NC_009972.1 Herpetosiphon aurantiacus DSM 785, complete genome","NC_009972.1 Herpetosiphon aurantiacus DSM 785, complete genome",24.fa,64sketches.sig.zip
+26,2e5e6a3c3424fb639400d74abcbda1c6,"CP001130.1 Hydrogenobaculum sp. Y04AAS1, complete genome","CP001130.1 Hydrogenobaculum sp. Y04AAS1, complete genome",25.fa,64sketches.sig.zip
+27,ed88074adf58a9cfce3a6e63ad414853,"CP000816.1 Ignicoccus hospitalis KIN4/I, complete genome","CP000816.1 Ignicoccus hospitalis KIN4/I, complete genome",26.fa,64sketches.sig.zip
+28,0f774696d30402cc9416e4339e29d022,"CP001013.1 Leptothrix cholodnii SP-6, complete genome","CP001013.1 Leptothrix cholodnii SP-6, complete genome",27.fa,64sketches.sig.zip
+29,ca6869d4abc24811464383043b077800,"NC_000909.1 Methanocaldococcus jannaschii DSM 2661, complete genome","NC_000909.1 Methanocaldococcus jannaschii DSM 2661, complete genome",28.fa,64sketches.sig.zip
+30,b0fb8a0eaa59aac1c267e3fd2e1e1aa1,"CP000609.1 Methanococcus maripaludis C5, complete genome","CP000609.1 Methanococcus maripaludis C5, complete genome",29.fa,64sketches.sig.zip
+31,d45be194ffb4596d4fa8845dd89d8d8d,"BX950229.1 Methanococcus maripaludis strain S2, complete sequence","BX950229.1 Methanococcus maripaludis strain S2, complete sequence",30.fa,64sketches.sig.zip
+32,78e186071f95b5f58b294343ce2d7ff8,"AE009439.1 Methanopyrus kandleri AV19, complete genome","AE009439.1 Methanopyrus kandleri AV19, complete genome",31.fa,64sketches.sig.zip
+33,56bdd31d168788f6b31dcd0751089a62,"AE010299.1 Methanosarcina acetivorans str. C2A, complete genome","AE010299.1 Methanosarcina acetivorans str. C2A, complete genome",32.fa,64sketches.sig.zip
+34,d9e98fc66928684bf96f0aaeb4adcb6e,"NC_005213.1 Nanoarchaeum equitans Kin4-M chromosome, complete genome","NC_005213.1 Nanoarchaeum equitans Kin4-M chromosome, complete genome",33.fa,64sketches.sig.zip
+35,d8ad9d2820efee039b6c50a767a603c8,"AL954747.1 Nitrosomonas europaea ATCC 19718, complete genome","AL954747.1 Nitrosomonas europaea ATCC 19718, complete genome",34.fa,64sketches.sig.zip
+36,264cfdad44548ad96c4a24b6a514a877,"NC_003272.1 Nostoc sp. PCC 7120 DNA, complete genome","NC_003272.1 Nostoc sp. PCC 7120 DNA, complete genome",35.fa,64sketches.sig.zip
+37,9b9d2415557f08b37f99abd7b8acc396,"CP001110.1 Pelodictyon phaeoclathratiforme BU-1, complete genome","CP001110.1 Pelodictyon phaeoclathratiforme BU-1, complete genome",36.fa,64sketches.sig.zip
+38,1471d6db344d5046899f85b521902fe7,"AP009380.1 Porphyromonas gingivalis ATCC 33277 DNA, complete genome","AP009380.1 Porphyromonas gingivalis ATCC 33277 DNA, complete genome",37.fa,64sketches.sig.zip
+39,4a154932a9c5ad4a44c2692edf8a6b34,"AE009441.1 Pyrobaculum aerophilum str. IM2, complete genome","AE009441.1 Pyrobaculum aerophilum str. IM2, complete genome",38.fa,64sketches.sig.zip
+40,299321db294df4cb4ec008e414d200ae,"CP000660.1 Pyrobaculum arsenaticum DSM 13514, complete genome","CP000660.1 Pyrobaculum arsenaticum DSM 13514, complete genome",39.fa,64sketches.sig.zip
+41,ad83523f64ee0e17faf8b825d5201533,"CP000561.1 Pyrobaculum calidifontis JCM 11548, complete genome","CP000561.1 Pyrobaculum calidifontis JCM 11548, complete genome",40.fa,64sketches.sig.zip
+42,714aa2c36122b1f1c0e8400e4d236e3b,"AE009950.1 Pyrococcus furiosus DSM 3638, complete genome","AE009950.1 Pyrococcus furiosus DSM 3638, complete genome",41.fa,64sketches.sig.zip
+43,8acbe1802aebe9f0c23cc5428ac003ee,"BA000001.2 Pyrococcus horikoshii OT3 DNA, complete genome","BA000001.2 Pyrococcus horikoshii OT3 DNA, complete genome",42.fa,64sketches.sig.zip
+44,7141c3fbf206734950d13cadba0bf46c,BX119912.1 Rhodopirellula baltica SH 1 complete genome,BX119912.1 Rhodopirellula baltica SH 1 complete genome,43.fa,64sketches.sig.zip
+45,357c0e8c59953384de1f6c7605a60317,"NC_003911.12 Ruegeria pomeroyi DSS-3, complete genome","NC_003911.12 Ruegeria pomeroyi DSS-3, complete genome",44.fa,64sketches.sig.zip
+46,5519d11c0ae28e167759d1c2b2e1b353,"CP000850.1 Salinispora arenicola CNS-205, complete genome","CP000850.1 Salinispora arenicola CNS-205, complete genome",45.fa,64sketches.sig.zip
+47,e41c93cc239f49bd10ebd38dfd343075,"CP000667.1 Salinispora tropica CNB-440, complete genome","CP000667.1 Salinispora tropica CNB-440, complete genome",46.fa,64sketches.sig.zip
+48,09a08691ce52952152f0e866a59f6261,"NC_009665.1 Shewanella baltica OS185, complete genome","NC_009665.1 Shewanella baltica OS185, complete genome",47.fa,64sketches.sig.zip
+49,a30b11dbb40d8a88d56861b05c0a92a8,"NC_010730.1 Sulfurihydrogenibium sp. YO3AOP1, complete genome","NC_010730.1 Sulfurihydrogenibium sp. YO3AOP1, complete genome",48.fa,64sketches.sig.zip
+50,ea1af81ce1042a3aaa59f860b8a39573,"NZ_ABZS01000228.1 Sulfurihydrogenibium yellowstonense SS-5 gcontig_18, whole genome shotgun sequence","NZ_ABZS01000228.1 Sulfurihydrogenibium yellowstonense SS-5 gcontig_18, whole genome shotgun sequence",49.fa,64sketches.sig.zip
+51,123f408fa4f07b259bd53f8497dd56d2,"CP000924.1 Thermoanaerobacter pseudethanolicus ATCC 33223, complete genome","CP000924.1 Thermoanaerobacter pseudethanolicus ATCC 33223, complete genome",50.fa,64sketches.sig.zip
+52,1d815f5d470aaafbbca434a2c84f7dc1,"CP000916.1 Thermotoga neapolitana DSM 4359, complete genome","CP000916.1 Thermotoga neapolitana DSM 4359, complete genome",51.fa,64sketches.sig.zip
+53,745322649f94665adf60b2ee985746ca,"CP000702.1 Thermotoga petrophila RKU-1, complete genome","CP000702.1 Thermotoga petrophila RKU-1, complete genome",52.fa,64sketches.sig.zip
+54,411679f88e1e2e6c7c70fbdc45cb3116,"CP000969.1 Thermotoga sp. RQ2, complete genome","CP000969.1 Thermotoga sp. RQ2, complete genome",53.fa,64sketches.sig.zip
+55,c3c880c49da784ff01dcea8381edfec6,"CP001230.1 Persephonella marina EX-H1, complete genome","CP001230.1 Persephonella marina EX-H1, complete genome",54.fa,64sketches.sig.zip
+56,a2c6721597c59adcd6739c36964e90ca,"AE017221.1 Thermus thermophilus HB27, complete genome","AE017221.1 Thermus thermophilus HB27, complete genome",55.fa,64sketches.sig.zip
+57,16fb896404e24616e97adafab029a609,"AE017226.1 Treponema denticola ATCC 35405, complete genome","AE017226.1 Treponema denticola ATCC 35405, complete genome",56.fa,64sketches.sig.zip
+58,eb0778b2d50402361622c2a5ce02a720,"BX571656.1 Wolinella succinogenes DSM 1740, complete genome","BX571656.1 Wolinella succinogenes DSM 1740, complete genome",57.fa,64sketches.sig.zip
+59,49bb148c4be3bea086ac80b86471cbba,"NZ_KQ961402.1 Zymomonas mobilis strain ATCC 31823 Scaffold1, whole genome shotgun sequence","NZ_KQ961402.1 Zymomonas mobilis strain ATCC 31823 Scaffold1, whole genome shotgun sequence",58.fa,64sketches.sig.zip
+60,272eda69da90813c8c2e841e0555e5b0,"NZ_CH959311.1 Sulfitobacter sp. EE-36 scf_1099451318005, whole genome shotgun sequence","NZ_CH959311.1 Sulfitobacter sp. EE-36 scf_1099451318005, whole genome shotgun sequence",59.fa,64sketches.sig.zip
+61,5f3cd303f3759ada3b1da0fe9f63c1f8,"NZ_CH959317.1 Sulfitobacter sp. NAS-14.1 scf_1099451320472, whole genome shotgun sequence","NZ_CH959317.1 Sulfitobacter sp. NAS-14.1 scf_1099451320472, whole genome shotgun sequence",60.fa,64sketches.sig.zip
+62,112f1147a84d405033898f45cd1ef747,"NZ_DS996397.1 Desulfovibrio piger ATCC 29098 Scfld442, whole genome shotgun sequence","NZ_DS996397.1 Desulfovibrio piger ATCC 29098 Scfld442, whole genome shotgun sequence",61.fa,64sketches.sig.zip
+63,15d80d7279c7fe46d00c230ba79b81f3,"BA000023.2 Sulfolobus tokodaii str. 7 DNA, complete genome","BA000023.2 Sulfolobus tokodaii str. 7 DNA, complete genome",62.fa,64sketches.sig.zip
+64,38729c6374925585db28916b82a6f513,"NC_011663.1 Shewanella baltica OS223, complete genome","NC_011663.1 Shewanella baltica OS223, complete genome",63.fa,64sketches.sig.zip

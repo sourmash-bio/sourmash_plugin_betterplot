@@ -1,0 +1,4 @@
+sort_order,md5,label,name,filename,signature_file
+1,f3a90d4e5528864a5bcc8434b0d0c3b1,"CP001071.1 Akkermansia muciniphila ATCC BAA-835, complete genome","CP001071.1 Akkermansia muciniphila ATCC BAA-835, complete genome",2.fa,sketches/2.sig.zip
+2,09a08691ce52952152f0e866a59f6261,"NC_009665.1 Shewanella baltica OS185, complete genome","NC_009665.1 Shewanella baltica OS185, complete genome",47.fa,sketches/47.sig.zip
+3,38729c6374925585db28916b82a6f513,"NC_011663.1 Shewanella baltica OS223, complete genome","NC_011663.1 Shewanella baltica OS223, complete genome",63.fa,sketches/63.sig.zip
