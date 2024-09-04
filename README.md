@@ -159,7 +159,7 @@ just the dendrogram.
 
 This command:
 ```
-sourmash compare sketches/{2,47,48,49,51,52,53,59,60}.sig.zip \
+sourmash compare sketches/{2,47,48,49,51,52,53,59,60,63}.sig.zip \
     -o 10sketches.cmp \
     --labels-to 10sketches.cmp.labels_to.csv
 
@@ -351,7 +351,7 @@ sourmash scripts manysearch 10sketches.sig.zip \
     sketches/shew21.sig.zip -o 10sketches.manysearch.csv
 
 sourmash scripts clustermap1 10sketches.manysearch.csv \
-    -o clustermap1.10sketches.png
+    -o clustermap1.10sketches.png \
     -u containment -R 10sketches-categories.csv
 ```
 
