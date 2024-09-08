@@ -5,5 +5,6 @@ all:
 
 clean:
 	snakemake -c 4 --delete-all-output
+	rm -f *.csv *.png
 
 cleanall: clean all
