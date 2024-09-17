@@ -139,11 +139,11 @@ Compare 3 sketches with `sourmash compare`, cluster, and show a cut point.
 
 This command:
 ```
-sourmash compare sketches/{2,47,63}.sig.zip -o 3sketches.cmp
+sourmash compare sketches/{2,47,63}.sig.zip -o 3sketches.cmp \
     --labels-to 3sketches.cmp.labels_to.csv
 
 sourmash scripts plot2 3sketches.cmp 3sketches.cmp.labels_to_csv \
-    -o examples/plot2.cut.3sketches.cmp.png \
+    -o plot2.cut.3sketches.cmp.png \
     --cut-point=1.2
 ```
 
