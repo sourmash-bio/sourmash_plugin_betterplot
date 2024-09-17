@@ -231,7 +231,7 @@ into a categories CSV that can be used to color points and columns/rows.
 These commands:
 ```
 # generate pairwise comparison
-sourmash scripts pairwise 64sketches.sig.zip -o 64sketches.pairwise.csv \
+sourmash scripts pairwise sketches/64sketches.sig.zip -o 64sketches.pairwise.csv \
     --write-all
 
 # generate clusters
