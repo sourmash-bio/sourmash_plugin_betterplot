@@ -93,7 +93,7 @@ in format; it must contain at least two columns, one named `category`,
 but can contain more as long as `category` is provided.
 
 The simplest possible categories CSV format is shown in
-[10sketches-categories.csv](examples/10sketches-categories.csv), and
+[10sketches-categories.csv](examples/sketches/10sketches-categories.csv), and
 it contains two columns, `label` and `category`.  When this file is
 loaded, `label` is matched to the name of each point/row/column, and
 that point is then assigned that category.
