@@ -212,7 +212,7 @@ sourmash scripts pairwise 10sketches.sig.zip -o 10sketches.pairwise.csv
 
 sourmash scripts mds 10sketches.cmp \
     -o mds.10sketches.cmp.png \
-    -C 10sketches-categories.csv
+    -C sketches/10sketches-categories.csv
 ```
 
 produces this plot:
@@ -329,7 +329,7 @@ sourmash compare sketches/{2,47,48,49,51,52,53,59,60}.sig.zip \
     --labels-to 10sketches.cmp.labels_to.csv
 
 sourmash scripts plot3 10sketches.cmp 10sketches.cmp.labels_to.csv \
-    -o plot3.10sketches.cmp.png -C 10sketches-categories.csv
+    -o plot3.10sketches.cmp.png -C sketches/10sketches-categories.csv
 ```
 
 produce this plot:
@@ -352,7 +352,7 @@ sourmash scripts manysearch 10sketches.sig.zip \
 
 sourmash scripts clustermap1 10sketches.manysearch.csv \
     -o clustermap1.10sketches.png \
-    -u containment -R 10sketches-categories.csv
+    -u containment -R sketches/10sketches-categories.csv
 ```
 
 produce:
