@@ -275,7 +275,7 @@ produce this plot:
 These commands:
 
 ```
-sourmash scripts pairwise 64sketches.sig.zip -o 64sketches.pairwise.csv \
+sourmash scripts pairwise sketches/64sketches.sig.zip -o 64sketches.pairwise.csv \
     --write-all
     
 sourmash scripts tsne2 64sketches.pairwise.csv \
