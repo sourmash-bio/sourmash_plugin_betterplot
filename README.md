@@ -122,11 +122,11 @@ Compare 3 sketches with `sourmash compare`, and cluster.
 
 This command:
 ```
-sourmash compare sketches/{2,47,63}.sig.zip -o 3sketches.cmp
+sourmash compare sketches/{2,47,63}.sig.zip -o 3sketches.cmp \
     --labels-to 3sketches.cmp.labels_to.csv
 
 sourmash scripts plot2 3sketches.cmp 3sketches.cmp.labels_to.csv \
-    -o examples/plot2.3sketches.cmp.png
+    -o plot2.3sketches.cmp.png
 ```
 
 produces this plot:
