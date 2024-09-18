@@ -857,7 +857,7 @@ class Command_Clustermap1(CommandLinePlugin):
         )
         subparser.add_argument(
             "--sort-by-category", action="store_true",
-            help="Sort rows by category"
+            help="Sort rows by category, instead of clustering them"
         )
 
     def main(self, args):
@@ -941,6 +941,11 @@ class Command_Clustermap1(CommandLinePlugin):
         elif args.no_y_labels:
             yticklabels = []
 
+        if args.sort_by_category:
+            row_cluster=False
+        else:
+            row_cluster=True
+
         # turn into dissimilarity matrix
         # plot!
         fig = sns.clustermap(
@@ -949,7 +954,7 @@ class Command_Clustermap1(CommandLinePlugin):
             vmin=args.vmin,
             vmax=args.vmax,
             col_colors=col_colors,
-            row_cluster=False,
+            row_cluster=row_cluster,
             row_colors=row_colors,
             xticklabels=xticklabels,
             yticklabels=yticklabels,
