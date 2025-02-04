@@ -11,6 +11,7 @@ categories. It also includes support for sparse comparison output
 formats produced by the fast multithreaded `manysearch` and `pairwise`
 functions in the
 [branchwater plugin for sourmash](https://github.com/sourmash-bio/sourmash_plugin_branchwater).
+Finally, it includes a sankey/alluvial flow plot to visualize metagenomic profiling from the `sourmash gather` to `sourmash tax` workflow.
 
 ## Why does this plugin exist?
 
@@ -47,6 +48,7 @@ As of v0.4, the betterplot plugin provides:
 * t-Stochastic Neighbor Embedding (tSNE) plots;
 * non-square matrix visualization for the output of `manysearch`;
 * an upset plot to visualize intersections between sketches;
+* sankey diagram to visualize taxonomic profiling;
 * a utility function to convert `pairwise` output into a similarity matrix;
 * a utility function to convert `cluster` output into color categories;
 
