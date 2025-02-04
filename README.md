@@ -387,6 +387,29 @@ produces:
 
 ![venn diagram of 3 sketches intersections](examples/3sketches.venn.png)
 
+### `sankey` - plot Sankey / Alluvial flow plot from sourmash taxonomy outputs
+
+Plot a flow diagram reflecting the taxonomic profiling from sourmash `gather` -> `sourmash tax`.
+
+Using the file produced from `sourmash tax metagenome -F csv_summary` (ends in `.summarized.csv`):
+
+```
+sourmash scripts sankey --summary-csv gather.summarized.csv
+```
+
+OR, using the file produced from `sourmash tax annotate` (ends in `.with-lineages.csv`):
+
+```
+sourmash scripts sankey --annotate-csv gather.with-lineages.csv
+```
+
+produces:
+
+![sankey taxonomic profiling plot](examples/sankey.png)
+
+By default, we will open an interactive `html` file. To output to a file, specify the file name with `-o` and use your desired filetype extension (.html, .png, .jpg, .jpeg, .pdf, or .svg). To specify the title, use `--title`.
+
+
 ## Support
 
 We suggest filing issues in [the main sourmash issue tracker](https://github.com/dib-lab/sourmash/issues) as that receives more attention!

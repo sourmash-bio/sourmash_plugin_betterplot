@@ -1693,7 +1693,7 @@ Build a sankey plot to visualize taxonomic profiling. Uses sourmash 'gather' -->
 
         # process csv
         nodes, links, hover_texts = process_csv_for_sankey(input_csv, csv_type)
-        base_title = input_csv.rsplit(".csv")[0]
+        base_title = os.path.basename(input_csv.rsplit(".csv")[0])
 
         # Create Sankey diagram
         fig = go.Figure(go.Sankey(
