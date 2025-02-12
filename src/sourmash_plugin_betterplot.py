@@ -1674,6 +1674,8 @@ Build a sankey plot to visualize taxonomic profiling. Uses sourmash 'gather' -->
         subparser.add_argument("-o", "--output", type=str, help="output file for alluvial flow diagram")
         subparser.add_argument("--title", type=str, help="Plot title (default: use input filename)")
 
+        subparser.epilog = "You must provide either --summary-csv or --annotate-csv, but not both."
+
     def main(self, args):
         # Build info appropriately based on input file type
         if args.summary_csv:

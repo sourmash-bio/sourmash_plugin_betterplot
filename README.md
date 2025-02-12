@@ -407,7 +407,7 @@ sourmash scripts sankey --annotate-csv gather.with-lineages.csv
 
 produces:
 
-![sankey taxonomic profiling plot](examples/sankey.png)
+![sankey taxonomic profiling plot](examples/tax-annot.sankey.png)
 
 By default, we will open an interactive `html` file. To output to a file, specify the file name with `-o` and use your desired filetype extension (.html, .png, .jpg, .jpeg, .pdf, or .svg). To specify the title, use `--title`.
 

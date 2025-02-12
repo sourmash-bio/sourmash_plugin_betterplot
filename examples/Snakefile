@@ -16,6 +16,8 @@ rule all:
         "tsne.64sketches.cmp.png",
         "tsne2.64sketches.cmp.png",
         "3sketches.venn.png",
+        "tax-mg.sankey.png",
+        "tax-annot.sankey.png",
 
 rule make_10sketches:
     input:
@@ -274,3 +276,22 @@ rule venn_3sketches:
         sourmash scripts venn {input} -o {output} --ident
     """
     
+rule sankey_mgx_summary:
+    input:
+        "tax/test.tax-mg.summarized.csv"
+    output:
+        png="tax-mg.sankey.png"
+    shell:
+        """
+        sourmash scripts sankey --summary-csv {input} -o {output}
+        """
+
+rule sankey_mgx_annotate:
+    input:
+        "tax/test.gather.with-lineages.csv"
+    output:
+        png="tax-annot.sankey.png"
+    shell:
+        """
+        sourmash scripts sankey --annotate-csv {input} -o {output}
+        """
