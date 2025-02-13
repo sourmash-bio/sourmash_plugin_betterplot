@@ -7,7 +7,7 @@ version = "0.4.5"
 
 dependencies = ["sourmash>=4.8.8,<5", "sourmash_utils>=0.2",
                 "matplotlib", "numpy", "scipy", "scikit-learn",
-                "seaborn", "upsetplot", "matplotlib_venn", "pandas"]
+                "seaborn", "upsetplot", "matplotlib_venn", "pandas", "plotly"]
 
 [metadata]
 license = { text = "BSD 3-Clause License" }
@@ -25,3 +25,4 @@ tsne_command = "sourmash_plugin_betterplot:Command_TSNE"
 tsne2_command = "sourmash_plugin_betterplot:Command_TSNE2"
 venn = "sourmash_plugin_betterplot:Command_Venn"
 presence_filter = "sourmash_plugin_betterplot:Command_PresenceFilter"
+sankey = "sourmash_plugin_betterplot:Command_Sankey"

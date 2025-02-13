@@ -11,6 +11,7 @@ categories. It also includes support for sparse comparison output
 formats produced by the fast multithreaded `manysearch` and `pairwise`
 functions in the
 [branchwater plugin for sourmash](https://github.com/sourmash-bio/sourmash_plugin_branchwater).
+Finally, it includes a sankey/alluvial flow plot to visualize metagenomic profiling from the `sourmash gather` to `sourmash tax` workflow.
 
 ## Why does this plugin exist?
 
@@ -47,6 +48,7 @@ As of v0.4, the betterplot plugin provides:
 * t-Stochastic Neighbor Embedding (tSNE) plots;
 * non-square matrix visualization for the output of `manysearch`;
 * an upset plot to visualize intersections between sketches;
+* sankey diagram to visualize taxonomic profiling;
 * a utility function to convert `pairwise` output into a similarity matrix;
 * a utility function to convert `cluster` output into color categories;
 
@@ -386,6 +388,29 @@ sourmash scripts venn sketches/{2,47,63}.sig.zip \
 produces:
 
 ![venn diagram of 3 sketches intersections](examples/3sketches.venn.png)
+
+### `sankey` - plot Sankey / Alluvial flow plot from sourmash taxonomy outputs
+
+Plot a flow diagram reflecting the taxonomic profiling from sourmash `gather` -> `sourmash tax`.
+
+Using the file produced from `sourmash tax metagenome -F csv_summary` (ends in `.summarized.csv`):
+
+```
+sourmash scripts sankey --summary-csv gather.summarized.csv
+```
+
+OR, using the file produced from `sourmash tax annotate` (ends in `.with-lineages.csv`):
+
+```
+sourmash scripts sankey --annotate-csv gather.with-lineages.csv
+```
+
+produces:
+
+![sankey taxonomic profiling plot](examples/tax-annot.sankey.png)
+
+By default, we will open an interactive `html` file. To output to a file, specify the file name with `-o` and use your desired filetype extension (.html, .png, .jpg, .jpeg, .pdf, or .svg). To specify the title, use `--title`.
+
 
 ## Support
 
