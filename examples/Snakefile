@@ -306,8 +306,8 @@ rule tree_10sketches_compare_matrix:
         png="disttree10sketches.matrix.png",
         nwk="disttree10sketches.matrix.nwk",
     shell: """
-        sourmash scripts tree --compare-matrix {input.cmp} --labels-from {input.labels} -o {output.nwk} \
-            --save-image {output.png}
+        sourmash scripts tree --compare-matrix {input.cmp} --labels-from {input.labels} \
+                --newick {output.nwk} -o {output.png}
     """
 
 rule tree_10sketches_compare_pairwise:
@@ -317,6 +317,6 @@ rule tree_10sketches_compare_pairwise:
         png="disttree10sketches.pairwise.png",
         nwk="disttree10sketches.pairwise.nwk",
     shell: """
-        sourmash scripts tree --pairwise-csv {input.pairwise} -o {output.nwk} \
-            --save-image {output.png}
+        sourmash scripts tree --pairwise-csv {input.pairwise} \
+                --newick {output.nwk} -o {output.png}
     """

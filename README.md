@@ -412,6 +412,37 @@ produces:
 By default, we will open an interactive `html` file. To output to a file, specify the file name with `-o` and use your desired filetype extension (.html, .png, .jpg, .jpeg, .pdf, or .svg). To specify the title, use `--title`.
 
 
+### `tree` - plot Neighbor-Joining tree
+
+Plot a NJ tree from 'sourmash compare' or 'sourmash pairwise' output.
+
+
+These commands use `sourmash compare`:
+```
+sourmash compare sketches/{2,47,48,49,51,52,53,59,60,63}.sig.zip \
+    -o 10sketches.cmp \
+    --labels-to 10sketches.cmp.labels_to.csv
+
+sourmash scripts tree --compare-matrix 10sketches.cmp --labels-from 10sketches.cmp.labels_to.csv --save-image 10sketches.cmp.tree.png
+```
+
+are equivalent to these commands which use `sourmash scripts pairwise`:
+```
+sourmash sig cat sketches/{2,47,48,49,51,52,53,59,60,63}.sig.zip \
+    -o 10sketches.sig.zip
+sourmash scripts pairwise 10sketches.sig.zip --write-all -o 10sketches.pairwise.csv
+
+sourmash scripts tree --pairwise 10sketches.pairwise.csv --save-image 10sketches.pairwise-cmp.tree.png
+```
+
+and each will produce this plot:
+
+![NJ tree](examples/disttree10sketches.pairwise.png)
+
+To open an interactive viewer for the tree file, use `--show`. To output the image to a file, specify the file name with `-o` and use your desired filetype extension (.html, .png, .jpg, .jpeg, .pdf, or .svg). To save the tree in newick format, use `--newick` and specify a file ending with '.nwk'.
+
+
+
 ## Support
 
 We suggest filing issues in [the main sourmash issue tracker](https://github.com/dib-lab/sourmash/issues) as that receives more attention!

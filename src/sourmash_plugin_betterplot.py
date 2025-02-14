@@ -1852,22 +1852,25 @@ Build a neighbor-joining tree from 'sourmash compare' or 'sourmash scripts pairw
             "--labels-from", help="output from 'sourmash compare --labels-to'"
         )
         subparser.add_argument("--matrix-type", type=str, choices=["similarity", "distance"], default="similarity", help="Are matrix values 'similarity' (e.g. jaccard, containment) or 'distance' (1-jaccard, 1-containment, etc)? default: 'similarity' (also default output for sourmash compare).")
-        subparser.add_argument("--use-column", type=str, default="jaccard", help="column name to use in pairwise CSV (default: jaccard)",)
-        subparser.add_argument("-o", "--output", type=str, help="Output file (Newick format, .nwk)")
-        subparser.add_argument("--save-image", type=str, help="Output file for tree image (.png, .jpg, .jpeg, .svg, .pdf)")
-        subparser.add_argument("--show-image", action="store_true", default=False, help="Open tree image in ETE3 browser window (default=False)")
+        subparser.add_argument("--use-column", type=str, default="jaccard", choices=["jaccard", "max_containment"], help="column name to use in pairwise CSV (default: jaccard)",)
+        subparser.add_argument("--newick", type=str, help="Output tree in  Newick format. File must end in '.nwk'")
+        subparser.add_argument("-o", "--output", type=str, help="Output file for tree image (.png, .jpg, .jpeg, .svg, .pdf)")
+        subparser.add_argument("--show", action="store_true", default=False, help="Open tree image in ETE3 browser window (default=False)")
         subparser.add_argument("--tree-layout", type=str, choices=["rectangular", "circular"], default="rectangular", help="Tree layout (rectangular or circular)")
 
+        subparser.epilog = "You must provide either --compare-matrix and --labels-from or --pairwise-csv, but not both."
+
     def main(self, args):
-        if args.compare_matrix and args.labels_from:
+        if args.compare_matrix:
+            if not args.labels_from:
+                notify("Must provide --labels-from when using --compare-matrix")
+                sys.exit(-1)
             matrix, labels = read_compare_matrix(args.compare_matrix, args.labels_from, args.matrix_type)
-        elif args.pairwise_csv and args.use_column:
+        elif args.pairwise_csv:
             matrix, labels = pairwise_to_matrix(args.pairwise_csv, args.use_column)
-        else:
-            raise ValueError("Either --compare-matrix with --labels-from, or --pairwise_csv must be provided.")
 
         tree = build_nj_tree(matrix, labels)
-        if args.output:
-            save_tree(tree, args.output)
-        if args.show_image or args.save_image:
-            plot_tree_ete(tree, args.tree_layout, output_image=args.save_image, show=args.show_image)
+        if args.newick:
+            save_tree(tree, args.newick)
+        if args.show or args.output:
+            plot_tree_ete(tree, args.tree_layout, output_image=args.output, show=args.show)
