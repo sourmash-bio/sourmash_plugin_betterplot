@@ -743,7 +743,7 @@ class Command_Plot3(CommandLinePlugin):
         labelinfo = load_labelinfo_csv(labelfilename)
 
         if len(labelinfo) != D.shape[0]:
-            error("{} labels != matrix size, exiting", len(labeltext))
+            error("{} labels != matrix size, exiting", len(labelinfo))
             sys.exit(-1)
 
         # load categories?
