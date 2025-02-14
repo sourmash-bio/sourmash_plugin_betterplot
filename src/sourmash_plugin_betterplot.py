@@ -26,6 +26,10 @@ import upsetplot
 import pandas as pd
 import plotly.graph_objects as go
 
+from Bio import Phylo
+from Bio.Phylo.TreeConstruction import DistanceTreeConstructor, DistanceMatrix
+from ete3 import Tree, TreeStyle
+
 import sourmash
 from sourmash import sourmash_args
 from sourmash.logging import debug_literal, error, notify, print_results
@@ -1726,3 +1730,134 @@ Build a sankey plot to visualize taxonomic profiling. Uses sourmash 'gather' -->
 
         # Save output based on file extension
         save_sankey_diagram(fig, args.output)
+
+
+def matrix_to_lower_triangle(input_matrix, input_labels, matrix_type="similarity"):
+    """Read and process a similarity/distance matrix and labels file into lower-triangle format."""
+    with open(input_matrix, "rb") as f:
+        matrix = numpy.load(f)
+    with open(input_labels, "r") as f:
+        labels = [line.strip() for line in f]
+    if matrix_type == "similarity":
+        matrix = 1 - matrix  # Convert similarity (e.g. jaccard) to distance
+
+    # Convert to lower triangle format
+    lower_triangle = []
+    for i in range(len(labels)):
+        lower_triangle.append([matrix[i][j] for j in range(i + 1)])
+
+    # replace commas with '_' because commas are treated differently for plotting
+    labels = [x.replace(',', '_') for x in labels]
+
+    return lower_triangle, labels
+
+def pairwise_to_lower_triangle(input_csv, use_column):
+    """Convert pairwise CSV to lower-triangle distance matrix."""
+    with open(input_csv, 'r') as file:
+        reader = csv.DictReader(file, quotechar='"',delimiter=',')
+        rows = list(reader)
+
+    sample_names = sorted(set(row['query_name'].strip() for row in rows) |
+                          set(row['match_name'].strip() for row in rows))
+    sample_d = {name: idx for idx, name in enumerate(sample_names)}
+
+    # Initialize lower-triangle distance matrix
+    lower_triangle = [[0.0] * (i + 1) for i in range(len(sample_d))]
+
+    for row in rows:
+        q, m = row['query_name'], row['match_name']
+        qi, mi = sample_d[q], sample_d[m]
+        value = float(row[use_column])
+        distance = 1 - value  # Convert similarity to distance
+
+        if qi > mi:
+            lower_triangle[qi][mi] = distance
+        else:
+            lower_triangle[mi][qi] = distance
+
+    labels = list(sample_d.keys())
+    # replace commas with '_' because commas are treated differently for plotting
+    labels = [x.replace(',', '_') for x in labels]
+    return lower_triangle, labels
+
+
+def build_nj_tree(distance_matrix, labels):
+    """Build a Neighbor-Joining tree using BioPython."""
+
+    # Create BioPython DistanceMatrix
+    dm = DistanceMatrix(names=labels, matrix=distance_matrix)
+
+    # Construct NJ tree using BioPython
+    constructor = DistanceTreeConstructor()
+    nj_tree = constructor.nj(dm)
+
+    return nj_tree  # Return BioPython tree directly
+
+
+def save_tree(tree, output_file):
+    """Save tree to file in Newick format using BioPython."""
+    if output_file.endswith(".nwk"):
+        Phylo.write(tree, output_file, "newick")
+        print(f"Saved Newick tree: {output_file}")
+    else:
+        print("Unsupported file format. Use .nwk for Newick format.")
+
+
+def plot_tree_ete(tree, layout, output_image=None, show=False):
+    """Render and save tree image using ete3."""
+    ete_tree = Tree(tree.format('newick'), format=1)
+    ts = TreeStyle()
+    ts.show_leaf_name = True
+    if layout == "circular":
+        ts.mode = "c"
+    else:
+        ts.mode = "r"  # Default to rectangular
+
+    if output_image:
+        if output_image.endswith((".png", ".jpg", ".jpeg", ".svg", ".pdf")):
+            ete_tree.render(output_image, tree_style=ts)
+            print(f"Saved tree image: {output_image}")
+        else:
+            print("Unsupported file format. Use .png, .jpg, .jpeg, .svg, or .pdf.")
+    if show:
+        ete_tree.show(tree_style=ts)
+
+class Command_DistTree(CommandLinePlugin):
+    command = 'tree'
+    description = """\
+Build a neighbor-joining tree from 'sourmash compare' or 'sourmash scripts pairwise' output.
+"""
+
+    usage = """
+   sourmash scripts tree --compare-matrix matrix.np -o output.nwk --image tree.png
+"""
+    epilog = epilog
+    formatter_class = argparse.RawTextHelpFormatter
+
+    def __init__(self, subparser):
+        super().__init__(subparser)
+        # add argparse arguments here.
+        group = subparser.add_mutually_exclusive_group(required=True)
+        group.add_argument("--compare-matrix", type=str, help="Path to the distance matrix (numpy .npy file)")
+        group.add_argument("--pairwise-csv", type=str, help="Path to a pairwise CSV file")
+        subparser.add_argument("--labels", type=str, help="Path to the labels file (required if using --matrix)")
+        subparser.add_argument("--matrix-type", type=str, choices=["similarity", "distance"], default="similarity", help="Are matrix values 'similarity' (e.g. jaccard, containment) or 'distance' (1-jaccard, 1-containment, etc)? default: 'similarity' (also default output for sourmash compare).")
+        subparser.add_argument("--use-column", type=str, default="jaccard", help="column name to use in pairwise CSV (default: jaccard)",)
+        subparser.add_argument("-o", "--output", type=str, help="Output file (Newick format, .nwk)")
+        subparser.add_argument("--save-image", type=str, help="Output file for tree image (.png, .jpg, .jpeg, .svg, .pdf)")
+        subparser.add_argument("--show-image", action="store_true", default=False, help="Open tree image in ETE3 browser window (default=False)")
+        subparser.add_argument("--tree-layout", type=str, choices=["rectangular", "circular"], default="rectangular", help="Tree layout (rectangular or circular)")
+
+    def main(self, args):
+        if args.compare_matrix and args.labels:
+            matrix, labels = matrix_to_lower_triangle(args.compare_matrix, args.labels, args.matrix_type)
+        elif args.pairwise_csv and args.use_column:
+            matrix, labels = pairwise_to_lower_triangle(args.pairwise_csv, args.use_column)
+        else:
+            raise ValueError("Either --compare-matrix with --labels, or --pairwise_csv must be provided.")
+
+        tree = build_nj_tree(matrix, labels)
+        if args.output:
+            save_tree(tree, args.output)
+        if args.show_image or args.save_image:
+            plot_tree_ete(tree, args.tree_layout, output_image=args.save_image, show=args.show_image)
