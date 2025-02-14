@@ -385,7 +385,7 @@ def plot2(args):
     labelinfo = load_labelinfo_csv(labelfilename)
 
     if len(labelinfo) != D.shape[0]:
-        error("{} labels != matrix size, exiting", len(labeltext))
+        error("{} labels != matrix size, exiting", len(labelinfo))
         sys.exit(-1)
 
     ### make the dendrogram:
@@ -1732,60 +1732,68 @@ Build a sankey plot to visualize taxonomic profiling. Uses sourmash 'gather' -->
         save_sankey_diagram(fig, args.output)
 
 
-def matrix_to_lower_triangle(input_matrix, input_labels, matrix_type="similarity"):
-    """Read and process a similarity/distance matrix and labels file into lower-triangle format."""
+def read_compare_matrix(input_matrix, labels_from, matrix_type="similarity"):
+    """Read and process a similarity/distance matrix and labels file."""
     with open(input_matrix, "rb") as f:
-        matrix = numpy.load(f)
-    with open(input_labels, "r") as f:
-        labels = [line.strip() for line in f]
-    if matrix_type == "similarity":
-        matrix = 1 - matrix  # Convert similarity (e.g. jaccard) to distance
+        D = numpy.load(f)
+    notify(f"...got {D.shape[0]} x {D.shape[1]} matrix.", *D.shape)
 
-    # Convert to lower triangle format
-    lower_triangle = []
-    for i in range(len(labels)):
-        lower_triangle.append([matrix[i][j] for j in range(i + 1)])
+    labelfilename = labels_from
+    notify(f"loading labels from CSV file '{labelfilename}'")
+
+    labelinfo = load_labelinfo_csv(labelfilename)
+
+    if len(labelinfo) != D.shape[0]:
+        error("{} labels != matrix size, exiting", len(labelinfo))
+        sys.exit(-1)
+
+    if matrix_type == "similarity":
+        matrix = 1 - D  # Convert similarity (e.g. jaccard) to distance
+
+    labels = [row["label"] for row in labelinfo]
 
     # replace commas with '_' because commas are treated differently for plotting
     labels = [x.replace(',', '_') for x in labels]
 
-    return lower_triangle, labels
+    return matrix, labels
 
-def pairwise_to_lower_triangle(input_csv, use_column):
-    """Convert pairwise CSV to lower-triangle distance matrix."""
+def pairwise_to_matrix(input_csv, use_column='jaccard'):
+    """Convert pairwise CSV to a distance matrix."""
     with open(input_csv, 'r') as file:
-        reader = csv.DictReader(file, quotechar='"',delimiter=',')
+        reader = csv.DictReader(file, quotechar='"', delimiter=',')
         rows = list(reader)
 
     sample_names = sorted(set(row['query_name'].strip() for row in rows) |
                           set(row['match_name'].strip() for row in rows))
     sample_d = {name: idx for idx, name in enumerate(sample_names)}
+    notify(f"...found {len(sample_d.keys())} (total {len(rows)} pairwise comparisons).")
 
-    # Initialize lower-triangle distance matrix
-    lower_triangle = [[0.0] * (i + 1) for i in range(len(sample_d))]
+    # Initialize distance matrix
+    matrix = numpy.full((len(sample_d), len(sample_d)), numpy.float64(1.0))
+    numpy.fill_diagonal(matrix, 0.0)
 
     for row in rows:
         q, m = row['query_name'], row['match_name']
         qi, mi = sample_d[q], sample_d[m]
-        value = float(row[use_column])
-        distance = 1 - value  # Convert similarity to distance
+        value = numpy.float64(row[use_column])
+        distance = numpy.float64(1 - value)  # Convert similarity to distance
 
-        if qi > mi:
-            lower_triangle[qi][mi] = distance
-        else:
-            lower_triangle[mi][qi] = distance
+        matrix[qi, mi] = distance
+        matrix[mi, qi] = distance
 
-    labels = list(sample_d.keys())
-    # replace commas with '_' because commas are treated differently for plotting
-    labels = [x.replace(',', '_') for x in labels]
-    return lower_triangle, labels
+    labels = [x.replace(',', '_') for x in sample_d.keys()]  # Replace commas for safe plotting
+    return matrix, labels
 
 
 def build_nj_tree(distance_matrix, labels):
-    """Build a Neighbor-Joining tree using BioPython."""
+    """Build a Neighbor-Joining tree from a matrix using BioPython."""
+    # Convert full matrix to lower triangle format
+    lower_triangle = []
+    for i in range(len(labels)):
+        lower_triangle.append([distance_matrix[i, j] for j in range(i + 1)])
 
     # Create BioPython DistanceMatrix
-    dm = DistanceMatrix(names=labels, matrix=distance_matrix)
+    dm = DistanceMatrix(names=labels, matrix=lower_triangle)
 
     # Construct NJ tree using BioPython
     constructor = DistanceTreeConstructor()
@@ -1840,7 +1848,9 @@ Build a neighbor-joining tree from 'sourmash compare' or 'sourmash scripts pairw
         group = subparser.add_mutually_exclusive_group(required=True)
         group.add_argument("--compare-matrix", type=str, help="Path to the distance matrix (numpy .npy file)")
         group.add_argument("--pairwise-csv", type=str, help="Path to a pairwise CSV file")
-        subparser.add_argument("--labels", type=str, help="Path to the labels file (required if using --matrix)")
+        subparser.add_argument(
+            "--labels-from", help="output from 'sourmash compare --labels-to'"
+        )
         subparser.add_argument("--matrix-type", type=str, choices=["similarity", "distance"], default="similarity", help="Are matrix values 'similarity' (e.g. jaccard, containment) or 'distance' (1-jaccard, 1-containment, etc)? default: 'similarity' (also default output for sourmash compare).")
         subparser.add_argument("--use-column", type=str, default="jaccard", help="column name to use in pairwise CSV (default: jaccard)",)
         subparser.add_argument("-o", "--output", type=str, help="Output file (Newick format, .nwk)")
@@ -1849,12 +1859,12 @@ Build a neighbor-joining tree from 'sourmash compare' or 'sourmash scripts pairw
         subparser.add_argument("--tree-layout", type=str, choices=["rectangular", "circular"], default="rectangular", help="Tree layout (rectangular or circular)")
 
     def main(self, args):
-        if args.compare_matrix and args.labels:
-            matrix, labels = matrix_to_lower_triangle(args.compare_matrix, args.labels, args.matrix_type)
+        if args.compare_matrix and args.labels_from:
+            matrix, labels = read_compare_matrix(args.compare_matrix, args.labels_from, args.matrix_type)
         elif args.pairwise_csv and args.use_column:
-            matrix, labels = pairwise_to_lower_triangle(args.pairwise_csv, args.use_column)
+            matrix, labels = pairwise_to_matrix(args.pairwise_csv, args.use_column)
         else:
-            raise ValueError("Either --compare-matrix with --labels, or --pairwise_csv must be provided.")
+            raise ValueError("Either --compare-matrix with --labels-from, or --pairwise_csv must be provided.")
 
         tree = build_nj_tree(matrix, labels)
         if args.output:

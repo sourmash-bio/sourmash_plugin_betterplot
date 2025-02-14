@@ -301,12 +301,12 @@ rule sankey_mgx_annotate:
 rule tree_10sketches_compare_matrix:
     input:
         cmp="10sketches.cmp",
-        labels="10sketches.cmp.labels.txt",
+        labels="10sketches.cmp.labels_to.csv",
     output:
         png="disttree10sketches.matrix.png",
         nwk="disttree10sketches.matrix.nwk",
     shell: """
-        sourmash scripts tree --compare-matrix {input.cmp} --labels {input.labels} -o {output.nwk} \
+        sourmash scripts tree --compare-matrix {input.cmp} --labels-from {input.labels} -o {output.nwk} \
             --save-image {output.png}
     """
 
