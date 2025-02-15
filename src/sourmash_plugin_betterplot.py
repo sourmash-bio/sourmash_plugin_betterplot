@@ -1872,5 +1872,7 @@ Build a neighbor-joining tree from 'sourmash compare' or 'sourmash scripts pairw
         tree = build_nj_tree(matrix, labels)
         if args.newick:
             save_tree(tree, args.newick)
+        if not args.show:
+            os.environ['QT_QPA_PLATFORM']='offscreen'
         if args.show or args.output:
             plot_tree_ete(tree, args.tree_layout, output_image=args.output, show=args.show)
