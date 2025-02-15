@@ -304,19 +304,19 @@ rule tree_10sketches_compare_matrix:
         labels="10sketches.cmp.labels_to.csv",
     output:
         png="disttree10sketches.matrix.png",
-        nwk="disttree10sketches.matrix.nwk",
-    shell: """
-        sourmash scripts tree --compare-matrix {input.cmp} --labels-from {input.labels} \
-                --newick {output.nwk} -o {output.png}
-    """
+    shell:
+        """
+        sourmash scripts tree --compare-matrix {input.cmp} \
+                --labels-from {input.labels} -o {output.png}
+        """
 
 rule tree_10sketches_compare_pairwise:
     input:
         pairwise="10sketches.pairwise.csv",
     output:
         png="disttree10sketches.pairwise.png",
-        nwk="disttree10sketches.pairwise.nwk",
-    shell: """
+    shell:
+        """
         sourmash scripts tree --pairwise-csv {input.pairwise} \
-                --newick {output.nwk} -o {output.png}
-    """
+                -o {output.png}
+        """
