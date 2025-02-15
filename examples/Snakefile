@@ -18,6 +18,8 @@ rule all:
         "3sketches.venn.png",
         "tax-mg.sankey.png",
         "tax-annot.sankey.png",
+        "disttree10sketches.matrix.png",
+        "disttree10sketches.pairwise.png",
 
 rule make_10sketches:
     input:
@@ -294,4 +296,27 @@ rule sankey_mgx_annotate:
     shell:
         """
         sourmash scripts sankey --annotate-csv {input} -o {output}
+        """
+
+rule tree_10sketches_compare_matrix:
+    input:
+        cmp="10sketches.cmp",
+        labels="10sketches.cmp.labels_to.csv",
+    output:
+        png="disttree10sketches.matrix.png",
+    shell:
+        """
+        sourmash scripts tree --compare-matrix {input.cmp} \
+                --labels-from {input.labels} -o {output.png}
+        """
+
+rule tree_10sketches_compare_pairwise:
+    input:
+        pairwise="10sketches.pairwise.csv",
+    output:
+        png="disttree10sketches.pairwise.png",
+    shell:
+        """
+        sourmash scripts tree --pairwise-csv {input.pairwise} \
+                -o {output.png}
         """
