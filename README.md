@@ -439,7 +439,7 @@ and each will produce this plot:
 
 ![NJ tree](examples/disttree10sketches.pairwise.png)
 
-To open an interactive viewer for the tree file, use `--show`. To output the image to a file, specify the file name with `-o` and use your desired filetype extension (.html, .png, .jpg, .jpeg, .pdf, or .svg). To save the tree in newick format, use `--newick` and specify a file ending with '.nwk'.
+ To output the image to a file, specify the file name with `-o` and use your desired filetype extension (.html, .png, .jpg, .jpeg, .pdf, or .svg). To save the tree in newick format, use `--newick` and specify a file ending with '.nwk'. To open an interactive viewer for the tree file, use `--show`. Note: this requires an X display; do not use it without display capacity, as is will cause the tree command to fail.
 
 
 
