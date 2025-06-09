@@ -7,8 +7,7 @@ import subprocess
 import collections
 import pprint
 
-import pkg_resources
-from pkg_resources import Requirement, resource_filename, ResolutionError
+import importlib.metadata
 import traceback
 from io import open  # pylint: disable=redefined-builtin
 from io import StringIO
@@ -18,6 +17,10 @@ SIG_FILES = [os.path.join('demo', f) for f in (
   "SRR2060939_1.sig", "SRR2060939_2.sig", "SRR2241509_1.sig",
   "SRR2255622_1.sig", "SRR453566_1.sig", "SRR453569_1.sig", "SRR453570_1.sig")
 ]
+
+def get_test_data(filename):
+    thisdir = os.path.dirname(__file__)
+    return os.path.join(thisdir, "test-data", filename)
 
 
 def scriptpath(scriptname='sourmash'):
@@ -43,23 +46,13 @@ def _runscript(scriptname):
     namespace = {"__name__": "__main__"}
     namespace['sys'] = globals()['sys']
 
-    try:
-        pkg_resources.load_entry_point("sourmash", 'console_scripts', scriptname)()
-        return 0
-    except pkg_resources.ResolutionError:
-        pass
-
-    path = scriptpath()
-
-    scriptfile = os.path.join(path, scriptname)
-    if os.path.isfile(scriptfile):
-        if os.path.isfile(scriptfile):
-            exec(  # pylint: disable=exec-used
-                compile(open(scriptfile).read(), scriptfile, 'exec'),
-                namespace)
-            return 0
-
-    return -1
+    entry_points = importlib.metadata.entry_points(
+        group="console_scripts", name="sourmash"
+    )
+    assert len(entry_points) == 1
+    smash_cli = tuple(entry_points)[0].load()
+    smash_cli()
+    return 0
 
 
 ScriptResults = collections.namedtuple('ScriptResults',
@@ -126,21 +119,6 @@ def runscript(scriptname, args, **kwargs):
         assert False, (status, out, err)
 
     return ScriptResults(status, out, err)
-
-
-def get_test_data(filename):
-    filepath = None
-    try:
-        filepath = resource_filename(
-            Requirement.parse("sourmash"), "sourmash/sourmash/test-data/"\
-                + filename)
-    except ResolutionError:
-        pass
-    if not filepath or not os.path.isfile(filepath):
-        filepath = os.path.join(os.path.dirname(__file__), 'test-data',
-                                filename)
-    return filepath
-
 
 class TempDirectory(object):
     def __init__(self):
