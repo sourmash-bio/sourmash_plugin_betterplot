@@ -18,6 +18,10 @@ SIG_FILES = [os.path.join('demo', f) for f in (
   "SRR2255622_1.sig", "SRR453566_1.sig", "SRR453569_1.sig", "SRR453570_1.sig")
 ]
 
+def get_test_data(filename):
+    thisdir = os.path.dirname(__file__)
+    return os.path.join(thisdir, "test-data", filename)
+
 
 def scriptpath(scriptname='sourmash'):
     """Return the path to the scripts, in both dev and install situations."""
@@ -115,21 +119,6 @@ def runscript(scriptname, args, **kwargs):
         assert False, (status, out, err)
 
     return ScriptResults(status, out, err)
-
-
-def get_test_data(filename):
-    filepath = None
-    try:
-        filepath = resource_filename(
-            Requirement.parse("sourmash"), "sourmash/sourmash/test-data/"\
-                + filename)
-    except ResolutionError:
-        pass
-    if not filepath or not os.path.isfile(filepath):
-        filepath = os.path.join(os.path.dirname(__file__), 'test-data',
-                                filename)
-    return filepath
-
 
 class TempDirectory(object):
     def __init__(self):
