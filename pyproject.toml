@@ -9,7 +9,7 @@ version = "0.5.1"
 dependencies = ["sourmash>=4.9.2,<5", "sourmash_utils>=0.2",
                 "matplotlib", "numpy", "scipy", "scikit-learn",
                 "seaborn", "upsetplot", "matplotlib_venn", "pandas",
-                "plotly", "biopython", "ete3", "kaleido", "pyqt5",
+                "plotly", "biopython", "ete4", "kaleido", "pyqt6",
                 "legacy_cgi"]
 
 [build-system]
