@@ -3,7 +3,7 @@ name = "sourmash_plugin_betterplot"
 description = "sourmash plugin for improved plotting/viz and cluster examination."
 readme = "README.md"
 requires-python = ">=3.10"
-version = "0.5.0"
+version = "0.5.1"
 
 # note: "legacy_cgi" is currently needed for ete3, but may need to be changed on next ete release, see: https://github.com/etetoolkit/ete/issues/780
 dependencies = ["sourmash>=4.9.2,<5", "sourmash_utils>=0.2",
