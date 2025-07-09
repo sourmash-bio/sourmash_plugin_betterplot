@@ -1437,7 +1437,7 @@ Calculate and display overlaps between two or three sourmash sketches.
             print_moltype = moltype
             if print_moltype is None:
                 print_moltype = '*'
-            notify(f"Loading sketches from {filename} with k={args.ksize} moltype={moltype}")
+            notify(f"Loading sketches from {filename} with k={args.ksize} moltype={print_moltype}")
             x = list(sourmash.load_file_as_signatures(filename,
                                                       ksize=args.ksize,
                                                       select_moltype=moltype))
