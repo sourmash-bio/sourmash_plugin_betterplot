@@ -45,6 +45,12 @@ def load_labelinfo_csv(filename):
     with sourmash_args.FileInputCSV(filename) as r:
         labelinfo = list(r)
 
+    if len(labelinfo) == 0:
+        raise Exception("ERROR: no labels found!?")
+
+    if not 'sort_order' in labelinfo[0]:
+        raise Exception("ERROR: this doesn't look like a 'labels' file produced by 'sourmash compare --labels-to'")
+
     labelinfo.sort(key=lambda row: int(row["sort_order"]))
     return labelinfo
 
