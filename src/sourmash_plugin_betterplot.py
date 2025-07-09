@@ -35,7 +35,7 @@ from sourmash import sourmash_args
 from sourmash.logging import debug_literal, error, notify, print_results
 from sourmash.plugins import CommandLinePlugin
 import sourmash_utils
-from sourmash.cli.utils import (add_ksize_arg, add_moltype_args)
+from sourmash.cli.utils import (add_ksize_arg, add_moltype_args, add_scaled_arg)
 
 
 ### utility functions
@@ -1417,10 +1417,11 @@ Calculate and display overlaps between two or three sourmash sketches.
                                help="override name for second sketch")
         subparser.add_argument('--name3', default=None,
                                help="override name for (optional) third sketch")
-        subparser.add_argument('--ident', action='store_true',
+        subparser.add_argument('--ident', action='store_true', dest='ident',
                                help="use first space-separated identifier for sequence name")
-        add_ksize_arg(subparser)
+        add_ksize_arg(subparser, default=31)
         add_moltype_args(subparser)
+        add_scaled_arg(subparser)
 
     def main(self, args):
         # code that we actually run.
@@ -1433,7 +1434,10 @@ Calculate and display overlaps between two or three sourmash sketches.
 
         sketches = []
         for filename in sketch_files:
-            notify(f"Loading sketches from {filename}")
+            print_moltype = moltype
+            if print_moltype is None:
+                print_moltype = '*'
+            notify(f"Loading sketches from {filename} with k={args.ksize} moltype={moltype}")
             x = list(sourmash.load_file_as_signatures(filename,
                                                       ksize=args.ksize,
                                                       select_moltype=moltype))
@@ -1451,8 +1455,14 @@ Calculate and display overlaps between two or three sourmash sketches.
             sys.exit(-1)
 
         mh1 = sketches[0].minhash
-        mh2 = sketches[1].minhash
-        assert mh1.scaled == mh2.scaled
+
+        scaled = args.scaled
+        if scaled is None:
+            scaled = mh1.scaled
+
+        mh1 = mh1.downsample(scaled=scaled)
+        mh2 = sketches[1].minhash.downsample(scaled=scaled)
+        mh1.jaccard(mh2)        # test for general compatibility :)
 
         hashes1 = set(mh1.hashes)
         hashes2 = set(mh2.hashes)
@@ -1471,6 +1481,8 @@ Calculate and display overlaps between two or three sourmash sketches.
 
         if len(sketches) == 2:
             notify("found two sketches - outputting a 2-part Venn diagram.")
+            if mh1.track_abundance or mh2.track_abundance:
+                notify("NOTE: abundances detected, but not used; try weighted_venn")
             sizes = _venn2_sizes(hashes1, hashes2)
             sizes = [ size * mh1.scaled for size in sizes ]
             v = venn2(sizes, set_labels=(label1, label2))
@@ -1480,8 +1492,11 @@ Calculate and display overlaps between two or three sourmash sketches.
 
         elif len(sketches) == 3:
             notify("found three sketches - outputting a 3-part Venn diagram.")
-            mh3 = sketches[2].minhash
-            assert mh1.scaled == mh3.scaled
+            if mh1.track_abundance or mh2.track_abundance or mh3.track_abundance:
+                notify("NOTE: abundances detected, but not used; try weighted_venn")
+
+            mh3 = sketches[2].minhash.downsample(scaled=scaled)
+            mh1.jaccard(mh3)    # again, test for compatibility
 
             hashes3 = set(mh3.hashes)
             label3 = args.name3
