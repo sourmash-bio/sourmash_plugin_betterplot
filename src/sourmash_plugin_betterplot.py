@@ -1496,11 +1496,11 @@ Abundances are ignored.
 
         elif len(sketches) == 3:
             notify("found three sketches - outputting a 3-part Venn diagram.")
-            if mh1.track_abundance or mh2.track_abundance or mh3.track_abundance:
-                notify("NOTE: abundances detected, but not used; try weighted_venn")
-
             mh3 = sketches[2].minhash.downsample(scaled=scaled)
             mh1.jaccard(mh3)    # again, test for compatibility
+
+            if mh1.track_abundance or mh2.track_abundance or mh3.track_abundance:
+                notify("NOTE: abundances detected, but not used; try weighted_venn")
 
             hashes3 = set(mh3.hashes)
             label3 = args.name3
