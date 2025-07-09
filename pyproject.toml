@@ -31,6 +31,7 @@ cluster_to_categories_command = "sourmash_plugin_betterplot:Command_ClusterToCat
 tsne_command = "sourmash_plugin_betterplot:Command_TSNE"
 tsne2_command = "sourmash_plugin_betterplot:Command_TSNE2"
 venn = "sourmash_plugin_betterplot:Command_Venn"
+weighted_venn = "sourmash_plugin_betterplot:Command_WeightedVenn"
 presence_filter = "sourmash_plugin_betterplot:Command_PresenceFilter"
 sankey = "sourmash_plugin_betterplot:Command_Sankey"
 tree = "sourmash_plugin_betterplot:Command_DistTree"
