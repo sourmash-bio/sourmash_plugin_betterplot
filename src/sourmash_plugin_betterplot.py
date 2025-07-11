@@ -28,13 +28,6 @@ import plotly.graph_objects as go
 
 from Bio import Phylo
 from Bio.Phylo.TreeConstruction import DistanceTreeConstructor, DistanceMatrix
-try:
-    from ete3 import Tree, TreeStyle
-except ImportError:
-    print("** WARNING: cannot import TreeStyle; maybe PyQT5 is not installed?",
-          file=sys.stderr)
-    print("** Will not be able to output trees.",
-           file=sys.stderr)
 
 import sourmash
 from sourmash import sourmash_args
@@ -1954,6 +1947,14 @@ def save_tree(tree, output_file):
 
 def plot_tree_ete(tree, layout, output_image=None, show=False):
     """Render and save tree image using ete3."""
+    try:
+        from ete3 import Tree, TreeStyle
+    except ImportError:
+        print("** WARNING: could not import TreeStyle; maybe PyQT5 is not installed?",
+              file=sys.stderr)
+        print("** Will not be able to output trees. About to fail in 1... 2... 3...",
+               file=sys.stderr)
+
     ete_tree = Tree(tree.format('newick'), format=1)
     ts = TreeStyle()
     ts.show_leaf_name = True
