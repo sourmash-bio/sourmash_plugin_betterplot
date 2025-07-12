@@ -21,6 +21,7 @@ rule all:
         "tax-annot.sankey.png",
         "disttree10sketches.matrix.png",
         "disttree10sketches.pairwise.png",
+        "tax-mg.treemap.png",
 
 rule make_10sketches:
     input:
@@ -298,6 +299,16 @@ rule sankey_mgx_summary:
     shell:
         """
         sourmash scripts sankey --summary-csv {input} -o {output}
+        """
+
+rule treemap_mgx_summary:
+    input:
+        "tax/test.tax-mg.summarized.csv"
+    output:
+        png="tax-mg.treemap.png"
+    shell:
+        """
+        sourmash scripts treemap {input} -o {output}
         """
 
 rule sankey_mgx_annotate:
