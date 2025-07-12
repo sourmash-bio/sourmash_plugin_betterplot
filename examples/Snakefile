@@ -16,6 +16,7 @@ rule all:
         "tsne.64sketches.cmp.png",
         "tsne2.64sketches.cmp.png",
         "3sketches.venn.png",
+        "weighted_venn.png",
         "tax-mg.sankey.png",
         "tax-annot.sankey.png",
         "disttree10sketches.matrix.png",
@@ -278,6 +279,17 @@ rule venn_3sketches:
         sourmash scripts venn {input} -o {output} --ident
     """
     
+rule weighted_venn:
+    input:
+        metag="sketches/SRR606249.sub.sig.zip",
+        genome="sketches/47.sig.zip",
+    output:
+        png="weighted_venn.png",
+    shell: """
+        sourmash scripts weighted_venn {input.metag} {input.genome} \
+           -o {output} --ident
+    """
+
 rule sankey_mgx_summary:
     input:
         "tax/test.tax-mg.summarized.csv"

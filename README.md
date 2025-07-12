@@ -389,6 +389,28 @@ produces:
 
 ![venn diagram of 3 sketches intersections](examples/3sketches.venn.png)
 
+### `weighted_venn` - plot 2-way sketch intersections using Venn diagrams
+
+Plot a Venn diagram of the intersections between two sketches, where
+one of the sketches has abundances (e.g. is from a metagenome).  The
+resulting Venn diagram is weighted by the multiplicity of k-mers in
+the metagenome, *except* for those k-mers in the second sketch.  This
+shows how much of the mixture (the first sketch) is accounted for by
+the k-mers in the second sketch. (We recognize this is conceptually
+incoherent, but it is nonetheless useful.) This approximates the fraction
+of the total metagenome dataset will map to the genome.
+
+This command:
+```
+sourmash scripts weighted_venn sketches/SRR606249.sub.sig.zip \
+    sketches/47.sig.zip \
+    -o weighted_venn.png --ident
+```
+
+produces:
+
+![weighted venn diagram of 2 sketch intersection](examples/weighted_venn.png)
+
 ### `sankey` - plot Sankey / Alluvial flow plot from sourmash taxonomy outputs
 
 Plot a flow diagram reflecting the taxonomic profiling from sourmash `gather` -> `sourmash tax`.
