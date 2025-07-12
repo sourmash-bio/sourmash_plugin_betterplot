@@ -16,6 +16,7 @@ import pickle
 import numpy
 import pylab
 import matplotlib.pyplot as plt
+from matplotlib import colormaps
 from matplotlib_venn import venn2, venn3
 import scipy.cluster.hierarchy as sch
 from sklearn.manifold import MDS, TSNE
@@ -25,6 +26,7 @@ import seaborn as sns
 import upsetplot
 import pandas as pd
 import plotly.graph_objects as go
+import squarify
 
 from Bio import Phylo
 from Bio.Phylo.TreeConstruction import DistanceTreeConstructor, DistanceMatrix
@@ -2018,3 +2020,86 @@ Build a neighbor-joining tree from 'sourmash compare' or 'sourmash scripts pairw
             os.environ['QT_QPA_PLATFORM']='offscreen'
         if args.show or args.output:
             plot_tree_ete(tree, args.tree_layout, output_image=args.output, show=args.show)
+
+
+class Command_TreeMap(CommandLinePlugin):
+    command = 'treemap'
+    description = """\
+Build a neighbor-joining tree from 'sourmash compare' or 'sourmash scripts pairwise' output.
+"""
+
+    usage = """
+   sourmash scripts tree --compare-matrix matrix.np -o output.nwk --image tree.png
+"""
+    epilog = epilog
+    formatter_class = argparse.RawTextHelpFormatter
+
+    def __init__(self, subparser):
+        super().__init__(subparser)
+        (csvfile, outfile, *, rank='phylum')
+    def main(self, args):
+        super().main(args)
+        plot_treemap(args)
+
+
+def plot_treemap(args)
+    df = pd.read_csv(args.csvfile)
+
+    print(f"reading input file '{args.csvfile}'")
+    for colname in ('query_name', 'rank', 'f_weighted_at_rank', 'lineage'):
+        if colname not in df.columns:
+            print(f"input is missing column '{colname}'; is this a csv_summary file?")
+            sys.exit(-1)
+
+    df = df.sort_values(by='f_weighted_at_rank')
+
+    # select rank
+    df2 = df[df['rank'] == args.rank]
+    df2['name'] = df2['lineage'].apply(lambda x: x.split(';')[-1])
+
+    fractions = list(df2['f_weighted_at_rank'].tolist())
+    names = list(df2['name'].tolist())
+    fractions.reverse()
+    names.reverse()
+
+    # use to build labels: a, b, c..., aa, ab, ac...
+    def iter_all_strings():
+        for size in itertools.count(1):
+            for s in itertools.product(ascii_lowercase, repeat=size):
+                yield "".join(s)
+
+    labels = []
+    for name, label in zip(names, iter_all_strings()):
+        labels.append(label)
+
+    # Create treemap
+    fig, ax = plt.subplots(figsize=(8, 6))
+
+    squarify.plot(sizes=fractions, label=labels,
+                  alpha=0.7, ax=ax,
+                  color=cmap(numpy.linspace(1, 0, len(labels)))
+    )
+    plt.axis('off')
+
+    # Position the text on the right side
+    # The x-coordinate (1.05) places the text slightly outside the right edge of the axes.
+    # The y-coordinate is calculated to distribute the text vertically.
+    # 'ha' (horizontal alignment) is set to 'left' to align the text from its left edge.
+    # 'va' (vertical alignment) is set to 'center' to center the text vertically.
+    # 'transform=ax.transAxes' ensures coordinates are relative to the axes.
+
+    for i, (name, label, f) in enumerate(zip(names, labels, fractions)):
+        y_position = 0.95 - (i * 0.035)  # Adjust for desired spacing and starting point
+        ax.text(1.03, y_position, f'{label}: {name} ({f*100:.1f}%)',
+                ha='left', va='center', transform=ax.transAxes, fontsize=10)
+
+    plt.tight_layout()
+    plt.show()
+
+    print(f"saving output to '{args.outfile}'")
+    plt.savefig(args.outfile)
+
+
+def main():
+    # @CTB to check: names are in right order :)
+    plot_treemap('SRR606249.x.podar.tax.csv', 'xxx.png')
