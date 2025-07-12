@@ -1,3 +1,4 @@
+
 """betterplot plugin implementation"""
 
 epilog = """
@@ -2025,24 +2026,33 @@ Build a neighbor-joining tree from 'sourmash compare' or 'sourmash scripts pairw
 class Command_TreeMap(CommandLinePlugin):
     command = 'treemap'
     description = """\
-Build a neighbor-joining tree from 'sourmash compare' or 'sourmash scripts pairwise' output.
+Build a treemap with proportional representation of a metagenome taxonomy.
 """
 
     usage = """
-   sourmash scripts tree --compare-matrix matrix.np -o output.nwk --image tree.png
+   sourmash scripts treemap csv_summary -o treemap.png [ -r <rank> ]
 """
     epilog = epilog
     formatter_class = argparse.RawTextHelpFormatter
 
     def __init__(self, subparser):
         super().__init__(subparser)
-        (csvfile, outfile, *, rank='phylum')
+        subparser.add_argument('csvfile', help='csv_summary output from tax metagenome')
+        subparser.add_argument('-o', '--output', required=True,
+                               help='output figure to this file')
+        subparser.add_argument('-r', '--rank', default='phylum',
+                               help='display at this rank')
+
     def main(self, args):
         super().main(args)
         plot_treemap(args)
 
 
-def plot_treemap(args)
+def plot_treemap(args):
+    from string import ascii_lowercase
+    import itertools
+    cmap = colormaps['viridis']
+
     df = pd.read_csv(args.csvfile)
 
     print(f"reading input file '{args.csvfile}'")
@@ -2055,7 +2065,7 @@ def plot_treemap(args)
 
     # select rank
     df2 = df[df['rank'] == args.rank]
-    df2['name'] = df2['lineage'].apply(lambda x: x.split(';')[-1])
+    df2['name'] = df2['lineage'].apply(lambda x: x.split(';')[-1]) # @CTB
 
     fractions = list(df2['f_weighted_at_rank'].tolist())
     names = list(df2['name'].tolist())
@@ -2094,12 +2104,6 @@ def plot_treemap(args)
                 ha='left', va='center', transform=ax.transAxes, fontsize=10)
 
     plt.tight_layout()
-    plt.show()
 
-    print(f"saving output to '{args.outfile}'")
-    plt.savefig(args.outfile)
-
-
-def main():
-    # @CTB to check: names are in right order :)
-    plot_treemap('SRR606249.x.podar.tax.csv', 'xxx.png')
+    print(f"saving output to '{args.output}'")
+    plt.savefig(args.output)
