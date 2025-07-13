@@ -436,7 +436,8 @@ By default, we will open an interactive `html` file. To output to a file, specif
 
 ### `tree` - plot Neighbor-Joining tree
 
-Plot a NJ tree from 'sourmash compare' or 'sourmash pairwise' output.
+Plot a Neighbor Joining tree from 'sourmash compare' or 'sourmash
+pairwise' output.
 
 
 These commands use `sourmash compare`:
@@ -459,11 +460,23 @@ sourmash scripts tree --pairwise 10sketches.pairwise.csv --save-image 10sketches
 
 and each will produce this plot:
 
-![NJ tree](examples/disttree10sketches.pairwise.png)
+![neighbor joining tree](examples/disttree10sketches.pairwise.png)
 
  To output the image to a file, specify the file name with `-o` and use your desired filetype extension (.html, .png, .jpg, .jpeg, .pdf, or .svg). To save the tree in newick format, use `--newick` and specify a file ending with '.nwk'. To open an interactive viewer for the tree file, use `--show`. Note: this requires an X display; do not use it without display capacity, as is will cause the tree command to fail.
 
+### `treemap` - plot a treemap summary of a taxonomy
 
+treemaps provide intuitive proportional visualization of taxonomic
+breakdowns of metagenomes.
+
+This command:
+```
+sourmash scripts treemap tax/test.tax-mg.summarized.csv -o tax-mg.treemap.png
+```
+
+produces:
+
+![treemap visualization](examples/tax-mg.treemap.png)
 
 ## Support
 
