@@ -28,14 +28,13 @@ import plotly.graph_objects as go
 
 from Bio import Phylo
 from Bio.Phylo.TreeConstruction import DistanceTreeConstructor, DistanceMatrix
-from ete3 import Tree, TreeStyle
 
 import sourmash
 from sourmash import sourmash_args
 from sourmash.logging import debug_literal, error, notify, print_results
 from sourmash.plugins import CommandLinePlugin
 import sourmash_utils
-from sourmash.cli.utils import (add_ksize_arg, add_moltype_args)
+from sourmash.cli.utils import (add_ksize_arg, add_moltype_args, add_scaled_arg)
 
 
 ### utility functions
@@ -44,6 +43,12 @@ def load_labelinfo_csv(filename):
     "Load file output by 'sourmash compare --labels-to'"
     with sourmash_args.FileInputCSV(filename) as r:
         labelinfo = list(r)
+
+    if len(labelinfo) == 0:
+        raise Exception("ERROR: no labels found!?")
+
+    if not 'sort_order' in labelinfo[0]:
+        raise Exception("ERROR: this doesn't look like a 'labels' file produced by 'sourmash compare --labels-to'")
 
     labelinfo.sort(key=lambda row: int(row["sort_order"]))
     return labelinfo
@@ -1346,7 +1351,6 @@ def set_size(x):
 def _venn2_sizes(a, b):
     return (set_size(a - b), set_size(b - a), set_size(a & b))
 
-
 def _venn3_sizes(a, b, c):
     return (
         set_size(
@@ -1386,12 +1390,11 @@ class Command_Venn(CommandLinePlugin):
 create and write out a pairwise or three-way Venn set overlap diagram.
 
 Calculate and display overlaps between two or three sourmash sketches.
-
-'venn' provides figure output.
+Abundances are ignored.
 """
 
     usage = """
-   sourmash scripts venn -k 31 <sketches>
+   sourmash scripts venn <sketches> -o fig.png
 """
     epilog = epilog
     formatter_class = argparse.RawTextHelpFormatter
@@ -1411,10 +1414,11 @@ Calculate and display overlaps between two or three sourmash sketches.
                                help="override name for second sketch")
         subparser.add_argument('--name3', default=None,
                                help="override name for (optional) third sketch")
-        subparser.add_argument('--ident', action='store_true',
+        subparser.add_argument('--ident', action='store_true', dest='ident',
                                help="use first space-separated identifier for sequence name")
-        add_ksize_arg(subparser)
+        add_ksize_arg(subparser, default=31)
         add_moltype_args(subparser)
+        add_scaled_arg(subparser)
 
     def main(self, args):
         # code that we actually run.
@@ -1427,7 +1431,10 @@ Calculate and display overlaps between two or three sourmash sketches.
 
         sketches = []
         for filename in sketch_files:
-            notify(f"Loading sketches from {filename}")
+            print_moltype = moltype
+            if print_moltype is None:
+                print_moltype = '*'
+            notify(f"Loading sketches from {filename} with k={args.ksize} moltype={print_moltype}")
             x = list(sourmash.load_file_as_signatures(filename,
                                                       ksize=args.ksize,
                                                       select_moltype=moltype))
@@ -1445,8 +1452,14 @@ Calculate and display overlaps between two or three sourmash sketches.
             sys.exit(-1)
 
         mh1 = sketches[0].minhash
-        mh2 = sketches[1].minhash
-        assert mh1.scaled == mh2.scaled
+
+        scaled = args.scaled
+        if scaled is None:
+            scaled = mh1.scaled
+
+        mh1 = mh1.downsample(scaled=scaled)
+        mh2 = sketches[1].minhash.downsample(scaled=scaled)
+        mh1.jaccard(mh2)        # test for general compatibility :)
 
         hashes1 = set(mh1.hashes)
         hashes2 = set(mh2.hashes)
@@ -1465,6 +1478,8 @@ Calculate and display overlaps between two or three sourmash sketches.
 
         if len(sketches) == 2:
             notify("found two sketches - outputting a 2-part Venn diagram.")
+            if mh1.track_abundance or mh2.track_abundance:
+                notify("NOTE: abundances detected, but not used; try weighted_venn")
             sizes = _venn2_sizes(hashes1, hashes2)
             sizes = [ size * mh1.scaled for size in sizes ]
             v = venn2(sizes, set_labels=(label1, label2))
@@ -1474,8 +1489,11 @@ Calculate and display overlaps between two or three sourmash sketches.
 
         elif len(sketches) == 3:
             notify("found three sketches - outputting a 3-part Venn diagram.")
-            mh3 = sketches[2].minhash
-            assert mh1.scaled == mh3.scaled
+            mh3 = sketches[2].minhash.downsample(scaled=scaled)
+            mh1.jaccard(mh3)    # again, test for compatibility
+
+            if mh1.track_abundance or mh2.track_abundance or mh3.track_abundance:
+                notify("NOTE: abundances detected, but not used; try weighted_venn")
 
             hashes3 = set(mh3.hashes)
             label3 = args.name3
@@ -1495,9 +1513,125 @@ Calculate and display overlaps between two or three sourmash sketches.
             set_venn_label(v, '011', format_bp(sizes[5]))
             set_venn_label(v, '111', format_bp(sizes[6]))
 
-        if args.output:
-            notify(f"saving to '{args.output}'")
-            pylab.savefig(args.output)
+        notify(f"saving to '{args.output}'")
+        pylab.savefig(args.output)
+
+
+class Command_WeightedVenn(CommandLinePlugin):
+    command = 'weighted_venn'
+    description = """\
+create and write out a pairwise Venn diagram, weighted by the abundance of
+the first sketch.
+"""
+
+    usage = """
+   sourmash scripts weighted_venn <sketches> -o fig.png
+"""
+    epilog = epilog
+    formatter_class = argparse.RawTextHelpFormatter
+
+    def __init__(self, subparser):
+        super().__init__(subparser)
+        # add argparse arguments here.
+        debug_literal('RUNNING cmd weighted_venn __init__')
+        subparser.add_argument('sketches', nargs='+',
+                               help="file(s) containing two sketches")
+        subparser.add_argument('-o', '--output', default=None,
+                               help="save Venn diagram image to this file",
+                               required=True)
+        subparser.add_argument('--name1', default=None,
+                               help="override name for first sketch")
+        subparser.add_argument('--name2', default=None,
+                               help="override name for second sketch")
+
+        subparser.add_argument('--ident', action='store_true', dest='ident',
+                               help="use first space-separated identifier for sequence name")
+        add_ksize_arg(subparser, default=31)
+        add_moltype_args(subparser)
+        add_scaled_arg(subparser)
+
+    def main(self, args):
+        # code that we actually run.
+        super().main(args)
+        moltype = sourmash_args.calculate_moltype(args)
+
+        debug_literal(f'RUNNING cmd {self} {args}')
+
+        sketch_files = list(args.sketches)
+
+        sketches = []
+        for filename in sketch_files:
+            print_moltype = moltype
+            if print_moltype is None:
+                print_moltype = '*'
+            notify(f"Loading sketches from {filename} with k={args.ksize} moltype={print_moltype}")
+            x = list(sourmash.load_file_as_signatures(filename,
+                                                      ksize=args.ksize,
+                                                      select_moltype=moltype))
+            notify(f"...loaded {len(x)} sketches from {filename}.")
+            sketches.extend(x)
+
+        if len(sketches) != 2:
+            error("ERROR: {len(sketches)} sketches found. Must supply exactly 2.")
+            sys.exit(-1)
+
+        mh1 = sketches[0].minhash
+
+        scaled = args.scaled
+        if scaled is None:
+            scaled = mh1.scaled
+
+        mh1 = mh1.downsample(scaled=scaled)
+        mh2 = sketches[1].minhash.downsample(scaled=scaled)
+        mh1.jaccard(mh2)        # test for general compatibility :)
+
+        label1 = args.name1
+        if not label1:
+            label1 = sketches[0].name
+            if args.ident:
+                label1 = sketches[0].name.split(' ')[0]
+
+        label2 = args.name2
+        if not label2:
+            label2 = sketches[1].name
+            if args.ident:
+                label2 = sketches[1].name.split(' ')[0]
+
+        notify("found two sketches - outputting a 2-part Venn diagram.")
+        notify("Venn diagram will be weighted by abundances in first sketch.")
+        if not mh1.track_abundance:
+            notify("ERROR: first sketch MUST have abundances.")
+            sys.exit(-1)
+        if mh2.track_abundance:
+            notify("WARNING: abundances on second sketch will be ignored.")
+
+        abunds = mh1.hashes     # dictionary w/abunds
+        mh2_hashes = set(mh2.hashes)
+        a_sub_b = 0
+        b_sub_a = 0
+        isect_count = 0
+
+        # count overlapping, weighted by abund of first
+        for h in mh2_hashes:
+            isect_count += abunds.get(h, 0)
+
+        # count disjoint, second only.
+        b_sub_a = len(mh2_hashes - set(abunds))
+
+        # count disjoint, first only, weighted by abund
+        for h in set(abunds) - mh2_hashes:
+            a_sub_b += abunds[h]
+
+        sizes = [ a_sub_b, b_sub_a, isect_count ]
+        sizes = [ size * mh1.scaled for size in sizes ]
+
+        v = venn2(sizes, set_labels=(label1, label2))
+        set_venn_label(v, '10', format_bp(sizes[0]))
+        set_venn_label(v, '01', format_bp(sizes[1]))
+        set_venn_label(v, '11', format_bp(sizes[2]))
+
+        notify(f"saving to '{args.output}'")
+        pylab.savefig(args.output)
 
 
 class Command_PresenceFilter(CommandLinePlugin):
@@ -1813,6 +1947,14 @@ def save_tree(tree, output_file):
 
 def plot_tree_ete(tree, layout, output_image=None, show=False):
     """Render and save tree image using ete3."""
+    try:
+        from ete3 import Tree, TreeStyle
+    except ImportError:
+        print("** WARNING: could not import TreeStyle; maybe PyQT5 is not installed?",
+              file=sys.stderr)
+        print("** Will not be able to output trees. About to fail in 1... 2... 3...",
+               file=sys.stderr)
+
     ete_tree = Tree(tree.format('newick'), format=1)
     ts = TreeStyle()
     ts.show_leaf_name = True

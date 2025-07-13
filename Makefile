@@ -19,3 +19,6 @@ cleanall:
 
 dist:
 	python -m build
+
+offline:
+	pip install -e . --no-index --find-links '.' --no-build-isolation
