@@ -35,7 +35,7 @@ from sourmash.logging import debug_literal, error, notify, print_results
 from sourmash.plugins import CommandLinePlugin
 import sourmash_utils
 from sourmash.cli.utils import (add_ksize_arg, add_moltype_args, add_scaled_arg)
-
+from typing import Dict, Iterator, Tuple, List
 
 ### utility functions
 
@@ -1721,7 +1721,6 @@ against average abund for significant matches.
         notify(f"saving figure to '{args.output}'")
         plt.savefig(args.output)
 
-
 def save_sankey_diagram(fig, output_file):
         if output_file:
             if output_file.endswith(".html"):
@@ -1734,59 +1733,94 @@ def save_sankey_diagram(fig, output_file):
                 notify("Unsupported file format. Use .html, .png, .jpg, .jpeg, .pdf, or .svg.")
         else:
             fig.show()  # Show the plot if no output file is specified
-    
-def process_csv_for_sankey(input_csv, csv_type):
+
+def load_lingroups(map_csv):
+    """Return {full_lineage_string: human_name}."""
+    lin2name = {}
+    with open(map_csv, newline="") as fh:
+        for row in csv.DictReader(fh):
+            lin2name[row["lin"].strip()] = row["name"].strip()
+    notify(f"loaded {len(lin2name)} lingroup names from '{map_csv}'")
+    return lin2name
+
+def iter_lineage_pairs(lineage: str) -> Iterator[
+    Tuple[int, str, str, str, str]
+]:
+    """
+    Yield successive pairs along the lineage chain.
+
+    Yields (depth, src_path, src_raw, tgt_path, tgt_raw).
+    """
+    parts = [p.strip() for p in lineage.split(";") if p.strip()] #split lineage by semicolon and strip whitespace
+    cumulative: List[str] = []
+    for position, (src_raw, tgt_raw) in enumerate(zip(parts, parts[1:])):
+        cumulative.append(src_raw)
+        src_path = ";".join(cumulative)
+        tgt_path = ";".join(cumulative + [tgt_raw])
+        yield position, src_path, src_raw, tgt_path, tgt_raw
+
+def want_pair(src_path: str, tgt_path: str, lin2name: Dict[str, str]) -> bool:
+    """Return True if this edge should be kept."""
+    if not lin2name:                            # no mapping → keep everything
+        return True
+    return src_path in lin2name and tgt_path in lin2name
+
+def build_display(raw: str, path: str,
+                  lin2name: Dict[str, str]) -> str:
+    """Return label for node: '14 (Phyl II)' or just '14'."""
+    return f"{raw} ({lin2name[path]})" if path in lin2name else raw
+
+
+def process_csv_for_sankey(input_csv, csv_type, lingroup_map=None):
+    lin2name = load_lingroups(lingroup_map) if lingroup_map else {}
     nodes = []  # List of unique taxonomy nodes
     node_map = {}  # Map taxonomic label to index
     links = []  # List of link connections with flow values
     hover_texts = []  # Custom hover text for percentages
     processed_lineages = set()  # Tracks added lineage links
 
-    # Read CSV file
-    with open(input_csv, 'r') as inF:
-        reader = csv.DictReader(inF)
-        data = list(reader)
-
     # Determine the appropriate headers based on csv_type
     if csv_type == "csv_summary":
-        fraction_key = "f_weighted_at_rank"
+        fraction_col = "f_weighted_at_rank"
     elif csv_type == "with-lineages":
-        fraction_key = "f_unique_weighted"
+        fraction_col = "f_unique_weighted"
     else:
         raise ValueError("Invalid csv_type. Use 'csv_summary' or 'with-lineages'.")
 
-    # Process each row in the dataset
-    for n, row in enumerate(data):
-        fraction = float(row[fraction_key]) * 100  # Convert to percentage
-        lineage_parts = row["lineage"].split(";")  # Taxonomic hierarchy
+    # Read CSV file
+    with open(input_csv, newline="") as inF:
+        rows = list(csv.DictReader(inF))
 
-        # Iterate through lineage levels and create source-target links
-        for i in range(len(lineage_parts) - 1):
-            source_label = lineage_parts[i].strip()
-            target_label = lineage_parts[i + 1].strip()
+        for row in rows:
+            frac = float(row[fraction_col]) * 100 # Convert to percentage
+            for position, src_path, src_raw, tgt_path, tgt_raw in \
+                    iter_lineage_pairs(row["lineage"]):
 
-            # Since 'tax metagenome' is already summarized, skip duplicates to prevent overcounting
-            if csv_type == "csv_summary" and (source_label, target_label) in processed_lineages:
-                continue
+                # ── optional filtering on lingroups -- #
+                if not want_pair(src_path, tgt_path, lin2name):
+                    continue
 
-            # Assign indices to nodes
-            if source_label not in node_map:
-                node_map[source_label] = len(nodes)
-                nodes.append(source_label)
+                src_disp = build_display(src_raw, src_path, lin2name)
+                tgt_disp = build_display(tgt_raw, tgt_path, lin2name)
+                src_lbl  = f"p{position}:{src_disp}"
+                tgt_lbl  = f"p{position+1}:{tgt_disp}"
 
-            if target_label not in node_map:
-                node_map[target_label] = len(nodes)
-                nodes.append(target_label)
+                # Since 'tax metagenome' is already summarized, skip duplicates to prevent overcounting
+                if csv_type == "csv_summary" and (src_lbl, tgt_lbl) in processed_lineages:
+                    continue
 
-            # Create a link between source and target
-            links.append({
-                "source": node_map[source_label],
-                "target": node_map[target_label],
-                "value": fraction
-            })
-            processed_lineages.add((source_label, target_label))  # Track added links
-            hover_texts.append(f"{source_label} → {target_label}<br>{fraction:.2f}%")
-    notify(f"loaded {n+1} rows from '{input_csv}'")
+                for lbl in (src_lbl, tgt_lbl):
+                    if lbl not in node_map:
+                        node_map[lbl] = len(nodes)
+                        nodes.append(lbl)
+
+                links.append({"source": node_map[src_lbl],
+                            "target": node_map[tgt_lbl],
+                            "value": frac})
+                hover_texts.append(f"{src_disp} → {tgt_disp}<br>{frac:.3f}%")
+                processed_lineages.add((src_lbl, tgt_lbl))
+
+        notify(f"loaded {len(rows)} rows from '{input_csv}'")
 
     return nodes, links, hover_texts
 
@@ -1808,6 +1842,7 @@ Build a sankey plot to visualize taxonomic profiling. Uses sourmash 'gather' -->
         group = subparser.add_mutually_exclusive_group(required=True)
         group.add_argument("--summary-csv", type=str, help="Path to csv_summary generated by running 'sourmash tax metagenome' on a sourmash gather csv")
         group.add_argument("--annotate-csv", type=str, help="Path to 'with-lineages' file generated by running 'sourmash tax annotate' on a sourmash gather csv")
+        subparser.add_argument("--lingroups", type=str, help="Path to 'lingroups' file to enable lingroup labeling in the Sankey diagram. This file should contain a mapping of lineage to lingroup.")
         
         subparser.add_argument("-o", "--output", type=str, help="output file for alluvial flow diagram")
         subparser.add_argument("--title", type=str, help="Plot title (default: use input filename)")
@@ -1832,7 +1867,7 @@ Build a sankey plot to visualize taxonomic profiling. Uses sourmash 'gather' -->
                 raise ValueError(f"Expected headers {required_headers} not found. Is this a correct file for '{csv_type}' type?")
 
         # process csv
-        nodes, links, hover_texts = process_csv_for_sankey(input_csv, csv_type)
+        nodes, links, hover_texts = process_csv_for_sankey(input_csv, csv_type, lingroup_map=args.lingroups)
         base_title = os.path.basename(input_csv.rsplit(".csv")[0])
 
         # Create Sankey diagram
