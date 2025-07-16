@@ -1707,7 +1707,7 @@ against average abund for significant matches.
             notify(f"filtered down to {len(df)} rows with {args.detection_column_name} >= {args.min_fraction} (--min-fraction)")
 
         if args.detection:
-            plt.plot(df.f_match_orig, df.average_abund, 'k.')
+            plt.plot(df[args.detection_column_name], df.average_abund, 'k.')
         else:
             plt.plot(df.match_containment_ani, df.average_abund, 'k.')
 
