@@ -29,7 +29,9 @@ import pandas as pd
 import plotly.graph_objects as go
 import squarify
 
-pd.options.mode.copy_on_write = True
+# this turns off a warning in presence_filter, but results in an error in
+# upsetplot :sweat_smile:
+#pd.options.mode.copy_on_write = True
 
 from Bio import Phylo
 from Bio.Phylo.TreeConstruction import DistanceTreeConstructor, DistanceMatrix
@@ -1144,6 +1146,7 @@ class Command_Upset(CommandLinePlugin):
             min_subset_size = args.min_subset_size
             notify(f"setting min_subset_size='{min_subset_size}' (percentage)")
 
+        print(data)
         upsetplot.plot(data, sort_by=args.sort_by,
                        min_subset_size=min_subset_size,
                        show_percentages=args.show_percentages)
@@ -1659,8 +1662,12 @@ against average abund for significant matches.
         subparser.add_argument('-o', '--output', default=None,
                                help="save image to this file",
                                required=True)
-        subparser.add_argument('-N', '--min-num-hashes',
+        subparser.add_argument('-N', '--min-num-hashes', type=int,
                                default=3, help='threshold (default: 3)')
+        subparser.add_argument('--min-ani', type=float, default=0.0,
+                               help='ANI threshold (default: None)')
+        subparser.add_argument('--min-fraction', type=float, default=0.0,
+                               help='detection threshold (default: None)')
         subparser.add_argument('--detection', action="store_true",
                                default=True)
         subparser.add_argument('--ani', dest='detection',
@@ -1680,9 +1687,22 @@ against average abund for significant matches.
         assert len(scaled) == 1
         scaled = list(scaled)[0]
 
-        threshold = args.min_num_hashes * scaled
-        df = df[df['unique_intersect_bp'] >= threshold]
-        notify(f"filtered down to {len(df)} rows with unique_intersect_bp >= {threshold}")
+        if 'name' in df.columns:
+            df['match_name'] = df['name'] # correct for gather/fastgather column names
+
+        notify(f"loaded {len(df)} rows.")
+        if args.min_num_hashes:
+            threshold = args.min_num_hashes * scaled
+            df = df[df['unique_intersect_bp'] >= threshold]
+            notify(f"filtered down to {len(df)} rows with unique_intersect_bp >= {threshold}")
+
+        if args.min_ani:
+            df = df[df['match_containment_ani'] >= args.min_ani]
+            notify(f"filtered down to {len(df)} rows with match_containment_ani >= {args.min_ani} (--min-ani)")
+
+        if args.min_fraction:
+            df = df[df['f_match_orig'] >= args.min_fraction]
+            notify(f"filtered down to {len(df)} rows with f_match_orig >= {args.min_fraction} (--min-fraction)")
 
         if args.detection:
             plt.plot(df.f_match_orig, df.average_abund, 'k.')
@@ -1711,19 +1731,22 @@ against average abund for significant matches.
         for (df2, color) in zip(dfs, colors):
             if args.detection:
                 plt.plot(df2.f_match_orig, df2.average_abund, color)
-            else:
+            else:               # ANI!
                 plt.plot(df2.match_containment_ani, df2.average_abund, color)
 
         ax = plt.gca()
-        ax.set_ylabel('number of copies')
         ax.set_yscale('log')
 
         if args.detection:
             ax.set_xlabel('fraction of genome detected')
+            ax.set_xlim((0, 1))
         else:
             ax.set_xlabel('cANI of match')
 
+        ax.set_ylabel('log abundance (copy number)')
+
         notify(f"saving figure to '{args.output}'")
+        plt.tight_layout()
         plt.savefig(args.output)
 
 
