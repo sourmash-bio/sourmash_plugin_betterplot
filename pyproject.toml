@@ -3,14 +3,14 @@ name = "sourmash_plugin_betterplot"
 description = "sourmash plugin for improved plotting/viz and cluster examination."
 readme = "README.md"
 requires-python = ">=3.11"
-version = "0.5.2"
+version = "0.5.3"
 
 # note: "legacy_cgi" is currently needed for ete3, but may need to be changed on next ete release, see: https://github.com/etetoolkit/ete/issues/780
 dependencies = ["sourmash>=4.9.2,<5", "sourmash_utils>=0.2",
                 "matplotlib", "numpy", "scipy", "scikit-learn",
                 "seaborn", "upsetplot", "matplotlib_venn", "pandas",
                 "plotly", "biopython", "ete3", "kaleido", "pyqt5",
-                "legacy_cgi"]
+                "legacy_cgi", "squarify==0.4.4"]
 
 [build-system]
 requires = ["setuptools>=61.0"]
@@ -35,3 +35,4 @@ weighted_venn = "sourmash_plugin_betterplot:Command_WeightedVenn"
 presence_filter = "sourmash_plugin_betterplot:Command_PresenceFilter"
 sankey = "sourmash_plugin_betterplot:Command_Sankey"
 tree = "sourmash_plugin_betterplot:Command_DistTree"
+treemap = "sourmash_plugin_betterplot:Command_TreeMap"

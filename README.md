@@ -41,14 +41,18 @@ and who knows what else??
 
 ### What does this plugin provide?
 
-As of v0.4, the betterplot plugin provides:
+As of v0.5.3 (July 2025), the betterplot plugin provides:
 
 * improved similarity matrix visualization, along with cluster extraction;
 * multidimensional scaling (MDS) plots;
 * t-Stochastic Neighbor Embedding (tSNE) plots;
 * non-square matrix visualization for the output of `manysearch`;
 * an upset plot to visualize intersections between sketches;
-* sankey diagram to visualize taxonomic profiling;
+* weighted and unweighted Venn diagrams to visualize overlaps between sketches;
+* a sankey diagram to visualize taxonomic profiling;
+* neighbor-joining trees;
+* a treemap diagram to visualize taxonomic profiling in a proportional way;
+* a presence/abundance scatterplot display to display genome membership in mixtures;
 * a utility function to convert `pairwise` output into a similarity matrix;
 * a utility function to convert `cluster` output into color categories;
 
@@ -436,7 +440,8 @@ By default, we will open an interactive `html` file. To output to a file, specif
 
 ### `tree` - plot Neighbor-Joining tree
 
-Plot a NJ tree from 'sourmash compare' or 'sourmash pairwise' output.
+Plot a Neighbor Joining tree from 'sourmash compare' or 'sourmash
+pairwise' output.
 
 
 These commands use `sourmash compare`:
@@ -459,11 +464,45 @@ sourmash scripts tree --pairwise 10sketches.pairwise.csv --save-image 10sketches
 
 and each will produce this plot:
 
-![NJ tree](examples/disttree10sketches.pairwise.png)
+![neighbor joining tree](examples/disttree10sketches.pairwise.png)
 
  To output the image to a file, specify the file name with `-o` and use your desired filetype extension (.html, .png, .jpg, .jpeg, .pdf, or .svg). To save the tree in newick format, use `--newick` and specify a file ending with '.nwk'. To open an interactive viewer for the tree file, use `--show`. Note: this requires an X display; do not use it without display capacity, as is will cause the tree command to fail.
 
+### `treemap` - plot a treemap summary of a taxonomy
 
+treemaps provide intuitive proportional visualization of taxonomic
+breakdowns of metagenomes.
+
+This command:
+```
+sourmash scripts treemap tax/test.tax-mg.summarized.csv -o tax-mg.treemap.png
+```
+
+produces:
+
+![treemap visualization](examples/tax-mg.treemap.png)
+
+### `presence_filter` - plot presence/abundance scatterplot of genomes detected by gather
+
+It is sometimes interesting to look at the distribution of size and abundance
+of detected genomes, as output by `sourmash gather` (or `sourmash prefetch`).
+
+This command:
+```
+sourmash scripts presence_filter \
+    tax/SRR11125891.gather.with-lineages.csv \
+    -o presence_filter.png \
+    -N 10 \
+    --green-color Entero --red-color Clostr
+```
+
+produces:
+
+![presence filter scatterplot](examples/presence_filter.png)
+
+which shows all matches with at least 10 hashes (here, 100kb),
+with green dots indicating those matches with "Entero" in the genome name,
+and red dots indicating those matches with "Clostr" in the genome name.
 
 ## Support
 
