@@ -459,14 +459,14 @@ sourmash sig cat sketches/{2,47,48,49,51,52,53,59,60,63}.sig.zip \
     -o 10sketches.sig.zip
 sourmash scripts pairwise 10sketches.sig.zip --write-all -o 10sketches.pairwise.csv
 
-sourmash scripts tree --pairwise 10sketches.pairwise.csv --save-image 10sketches.pairwise-cmp.tree.png
+sourmash scripts tree --pairwise 10sketches.pairwise.csv -o 10sketches.pairwise-cmp.tree.png
 ```
 
 and each will produce this plot:
 
 ![neighbor joining tree](examples/disttree10sketches.pairwise.png)
 
- To output the image to a file, specify the file name with `-o` and use your desired filetype extension (.html, .png, .jpg, .jpeg, .pdf, or .svg). To save the tree in newick format, use `--newick` and specify a file ending with '.nwk'. To open an interactive viewer for the tree file, use `--show`. Note: this requires an X display; do not use it without display capacity, as is will cause the tree command to fail.
+ To output the image to a file, specify the file name with `-o` and use your desired filetype extension (.html, .png, .jpg, .jpeg, .pdf, or .svg). To save the tree in newick format, use `--newick` and specify a file ending with '.nwk'. To open an interactive viewer for the tree file, use `--show`. Note: this requires an X display; do not use it without display capacity, as it will cause the tree command to fail.
 
 ### `treemap` - plot a treemap summary of a taxonomy
 
