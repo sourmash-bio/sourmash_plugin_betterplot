@@ -478,6 +478,28 @@ produces:
 
 ![treemap visualization](examples/tax-mg.treemap.png)
 
+### `presence_filter` - plot presence/abundance scatterplot of genomes detected by gather
+
+It is sometimes interesting to look at the distribution of size and abundance
+of detected genomes, as output by `sourmash gather` (or `sourmash prefetch`).
+
+This command:
+```
+sourmash scripts presence_filter \
+    tax/SRR11125891.gather.with-lineages.csv \
+    -o presence_filter.png \
+    -N 10 \
+    --green-color Entero --red-color Clostr
+```
+
+produces:
+
+![presence filter scatterplot](examples/presnce_filter.png)
+
+which shows all matches with at least 10 hashes (here, 100kb),
+with green dots indicating those matches with "Entero" in the genome name,
+and red dots indicating those matches with "Clostr" in the genome name.
+
 ## Support
 
 We suggest filing issues in [the main sourmash issue tracker](https://github.com/dib-lab/sourmash/issues) as that receives more attention!
