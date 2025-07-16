@@ -29,6 +29,8 @@ import pandas as pd
 import plotly.graph_objects as go
 import squarify
 
+pd.options.mode.copy_on_write = True
+
 from Bio import Phylo
 from Bio.Phylo.TreeConstruction import DistanceTreeConstructor, DistanceMatrix
 
@@ -2042,7 +2044,11 @@ Build a treemap with proportional representation of a metagenome taxonomy.
                                help='output figure to this file')
         subparser.add_argument('-r', '--rank', default='phylum',
                                help='display at this rank')
+        subparser.add_argument('-n', '--num-to-display', type=int,
+                               default=25,
+                               help="display at most these many taxa; aggregate the remainder (default: 25; 0 to display all)")
 
+        
     def main(self, args):
         super().main(args)
         plot_treemap(args)
@@ -2065,12 +2071,28 @@ def plot_treemap(args):
 
     # select rank
     df2 = df[df['rank'] == args.rank]
-    df2['name'] = df2['lineage'].apply(lambda x: x.split(';')[-1]) # @CTB
+    df2['name'] = df2['lineage'].apply(lambda x: x.split(';')[-1])
 
     fractions = list(df2['f_weighted_at_rank'].tolist())
     names = list(df2['name'].tolist())
     fractions.reverse()
     names.reverse()
+
+    num = max(args.num_to_display, 0) # non-negative
+    num = min(args.num_to_display, len(names)) # list of names
+    if num:
+        display_fractions = fractions[:num]
+        display_names = names[:num]
+
+        print(f'treemap: displaying {num} taxa of {len(fractions)} total')
+        if fractions[num:]:
+            remaining = fractions[num:]
+            remainder = sum(remaining)
+            display_fractions.append(remainder)
+            display_names.append('remaining taxa')
+            print(f'aggregating {len(remaining)} remaining taxa into one box')
+
+        fractions, names = display_fractions, display_names
 
     # use to build labels: a, b, c..., aa, ab, ac...
     def iter_all_strings():
