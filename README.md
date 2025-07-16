@@ -494,7 +494,7 @@ sourmash scripts presence_filter \
 
 produces:
 
-![presence filter scatterplot](examples/presnce_filter.png)
+![presence filter scatterplot](examples/presence_filter.png)
 
 which shows all matches with at least 10 hashes (here, 100kb),
 with green dots indicating those matches with "Entero" in the genome name,
