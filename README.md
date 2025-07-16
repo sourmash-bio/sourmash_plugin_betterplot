@@ -41,14 +41,18 @@ and who knows what else??
 
 ### What does this plugin provide?
 
-As of v0.4, the betterplot plugin provides:
+As of v0.5.3 (July 2025), the betterplot plugin provides:
 
 * improved similarity matrix visualization, along with cluster extraction;
 * multidimensional scaling (MDS) plots;
 * t-Stochastic Neighbor Embedding (tSNE) plots;
 * non-square matrix visualization for the output of `manysearch`;
 * an upset plot to visualize intersections between sketches;
-* sankey diagram to visualize taxonomic profiling;
+* weighted and unweighted Venn diagrams to visualize overlaps between sketches;
+* a sankey diagram to visualize taxonomic profiling;
+* neighbor-joining trees;
+* a treemap diagram to visualize taxonomic profiling in a proportional way;
+* a presence/abundance scatterplot display to display genome membership in mixtures;
 * a utility function to convert `pairwise` output into a similarity matrix;
 * a utility function to convert `cluster` output into color categories;
 
