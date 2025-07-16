@@ -1670,6 +1670,8 @@ against average abund for significant matches.
                                help='detection threshold (default: None)')
         subparser.add_argument('--detection', action="store_true",
                                default=True)
+        subparser.add_argument('--detection-column-name',
+                               default='f_match_orig')
         subparser.add_argument('--ani', dest='detection',
                                action="store_false")
         subparser.add_argument('--green-color',
@@ -1701,8 +1703,8 @@ against average abund for significant matches.
             notify(f"filtered down to {len(df)} rows with match_containment_ani >= {args.min_ani} (--min-ani)")
 
         if args.min_fraction:
-            df = df[df['f_match_orig'] >= args.min_fraction]
-            notify(f"filtered down to {len(df)} rows with f_match_orig >= {args.min_fraction} (--min-fraction)")
+            df = df[df[args.detection_column_name] >= args.min_fraction]
+            notify(f"filtered down to {len(df)} rows with {args.detection_column_name} >= {args.min_fraction} (--min-fraction)")
 
         if args.detection:
             plt.plot(df.f_match_orig, df.average_abund, 'k.')
