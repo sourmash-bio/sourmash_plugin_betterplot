@@ -1580,7 +1580,7 @@ the first sketch.
             sketches.extend(x)
 
         if len(sketches) != 2:
-            error("ERROR: {len(sketches)} sketches found. Must supply exactly 2.")
+            error(f"ERROR: {len(sketches)} sketches found. Must supply exactly 2.")
             sys.exit(-1)
 
         mh1 = sketches[0].minhash
@@ -2114,7 +2114,7 @@ def plot_treemap(args):
             remaining = fractions[num:]
             remainder = sum(remaining)
             display_fractions.append(remainder)
-            display_names.append('remaining taxa')
+            display_names.append(f'{len(remaining)} remaining taxa')
             print(f'aggregating {len(remaining)} remaining taxa into one box')
 
         fractions, names = display_fractions, display_names
