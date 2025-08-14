@@ -2072,6 +2072,9 @@ Build a treemap with proportional representation of a metagenome taxonomy.
         subparser.add_argument('-n', '--num-to-display', type=int,
                                default=25,
                                help="display at most these many taxa; aggregate the remainder (default: 25; 0 to display all)")
+        subparser.add_argument('--taxburst-json-in',
+                               action='store_true',
+                               help='read in taxburst JSON format instead')
 
         
     def main(self, args):
@@ -2084,24 +2087,42 @@ def plot_treemap(args):
     import itertools
     cmap = colormaps['viridis']
 
-    df = pd.read_csv(args.csvfile)
+    if not args.taxburst_json_in:
+        df = pd.read_csv(args.csvfile)
 
-    print(f"reading input file '{args.csvfile}'")
-    for colname in ('query_name', 'rank', 'f_weighted_at_rank', 'lineage'):
-        if colname not in df.columns:
-            print(f"input is missing column '{colname}'; is this a csv_summary file?")
-            sys.exit(-1)
+        print(f"reading input file '{args.csvfile}'")
+        for colname in ('query_name', 'rank', 'f_weighted_at_rank', 'lineage'):
+            if colname not in df.columns:
+                print(f"input is missing column '{colname}'; is this a csv_summary file?")
+                sys.exit(-1)
 
-    df = df.sort_values(by='f_weighted_at_rank')
+        df = df.sort_values(by='f_weighted_at_rank')
 
-    # select rank
-    df2 = df[df['rank'] == args.rank]
-    df2['name'] = df2['lineage'].apply(lambda x: x.split(';')[-1])
+        # select rank
+        df2 = df[df['rank'] == args.rank]
+        df2['name'] = df2['lineage'].apply(lambda x: x.split(';')[-1])
 
-    fractions = list(df2['f_weighted_at_rank'].tolist())
-    names = list(df2['name'].tolist())
-    fractions.reverse()
-    names.reverse()
+        fractions = list(df2['f_weighted_at_rank'].tolist())
+        names = list(df2['name'].tolist())
+        fractions.reverse()
+        names.reverse()
+    else:
+        import json, taxburst
+        with open(args.csvfile, 'rt') as fp:
+            top_nodes = json.load(fp)
+
+        all_nodes = taxburst.tree_utils.collect_all_nodes(top_nodes)
+        all_nodes = [ n for n in all_nodes if n["rank"] == args.rank ]
+        unclass = [ n for n in top_nodes if n["name"] == "unclassified" ]
+        if unclass:
+            assert len(unclass) == 1
+            all_nodes.append(unclass[0])
+
+        all_nodes.sort(key=lambda n: -n["count"])
+        fractions = [ n["count"] for n in all_nodes ]
+        total = sum(fractions)
+        fractions = [ c/total for c in fractions ]
+        names = [ n["name"] for n in all_nodes ]
 
     num = max(args.num_to_display, 0) # non-negative
     num = min(args.num_to_display, len(names)) # list of names
