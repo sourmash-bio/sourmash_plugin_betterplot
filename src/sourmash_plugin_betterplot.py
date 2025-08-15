@@ -1823,6 +1823,7 @@ def process_csv_for_sankey(input_csv, csv_type):
 
 
 def process_taxburst_for_sankey(input_file):
+    # @CTB normalize fractions
     import json, taxburst
     with open(input_file, 'rt') as fp:
         top_nodes = json.load(fp)
