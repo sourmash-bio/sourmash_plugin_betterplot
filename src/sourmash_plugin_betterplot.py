@@ -1809,6 +1809,9 @@ def process_csv_for_sankey(input_csv, csv_type):
                 node_map[target_label] = len(nodes)
                 nodes.append(target_label)
 
+            if source_label == 'Eukaryota':
+                print('XXX2', source_label, target_label, fraction)
+
             # Create a link between source and target
             links.append({
                 "source": node_map[source_label],
@@ -1823,10 +1826,11 @@ def process_csv_for_sankey(input_csv, csv_type):
 
 
 def process_taxburst_for_sankey(input_file):
-    # @CTB normalize fractions
     import json, taxburst
     with open(input_file, 'rt') as fp:
         top_nodes = json.load(fp)
+
+    taxburst.tree_utils.normalize_tree_counts(top_nodes)
 
     nodes = []  # List of unique taxonomy nodes
     node_map = {}  # Map taxonomic label to index
@@ -1838,7 +1842,6 @@ def process_taxburst_for_sankey(input_file):
 
     # Process each row in the dataset
     for n, node in enumerate(all_nodes):
-        fraction = float(node["count"])
         source_label = node["name"]
 
         if source_label not in node_map:
@@ -1847,6 +1850,7 @@ def process_taxburst_for_sankey(input_file):
 
         # Iterate through children
         for child_node in node.get("children", []):
+            percent = float(child_node["count"]) * 100
             target_label = child_node["name"]
 
             # Assign indices to nodes
@@ -1854,13 +1858,16 @@ def process_taxburst_for_sankey(input_file):
                 node_map[target_label] = len(nodes)
                 nodes.append(target_label)
 
+            if source_label == 'Eukaryota':
+                print('XXX', source_label, target_label, percent)
+
             # Create a link between source and target
             links.append({
                 "source": node_map[source_label],
                 "target": node_map[target_label],
-                "value": fraction
+                "value": percent
             })
-            hover_texts.append(f"{source_label} → {target_label}<br>{fraction:.2f}%")
+            hover_texts.append(f"{source_label} → {target_label}<br>{percent:.2f}%")
     notify(f"loaded {n+1} nodes from '{input_file}'")
 
     return nodes, links, hover_texts
@@ -1917,6 +1924,7 @@ Build a sankey plot to visualize taxonomic profiling. Uses sourmash 'gather' -->
         elif args.taxburst_json:
             nodes, links, hover_texts = process_taxburst_for_sankey(args.taxburst_json)
             base_title = os.path.basename(args.taxburst_json.rsplit(".json")[0])
+
 
         # Create Sankey diagram
         fig = go.Figure(go.Sankey(
@@ -2164,6 +2172,8 @@ def plot_treemap(args):
         with open(args.csvfile, 'rt') as fp:
             top_nodes = json.load(fp)
 
+        taxburst.tree_utils.normalize_tree_counts(top_nodes)
+
         all_nodes = taxburst.tree_utils.collect_all_nodes(top_nodes)
         all_nodes = [ n for n in all_nodes if n["rank"] == args.rank ]
         unclass = [ n for n in top_nodes if n["name"] == "unclassified" ]
@@ -2173,8 +2183,8 @@ def plot_treemap(args):
 
         all_nodes.sort(key=lambda n: -n["count"])
         fractions = [ n["count"] for n in all_nodes ]
-        total = sum(fractions)
-        fractions = [ c/total for c in fractions ]
+        #total = sum(fractions)
+        #fractions = [ c/total for c in fractions ]
         names = [ n["name"] for n in all_nodes ]
 
     num = max(args.num_to_display, 0) # non-negative
