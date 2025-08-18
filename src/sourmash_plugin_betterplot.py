@@ -1786,6 +1786,8 @@ def process_csv_for_sankey(input_csv, csv_type):
     else:
         raise ValueError("Invalid csv_type. Use 'csv_summary' or 'with-lineages'.")
 
+    processed_lineages_d = defaultdict(float)
+
     # Process each row in the dataset
     for n, row in enumerate(data):
         fraction = float(row[fraction_key]) * 100  # Convert to percentage
@@ -1797,7 +1799,8 @@ def process_csv_for_sankey(input_csv, csv_type):
             target_label = lineage_parts[i + 1].strip()
 
             # Since 'tax metagenome' is already summarized, skip duplicates to prevent overcounting
-            if csv_type == "csv_summary" and (source_label, target_label) in processed_lineages:
+            if csv_type == "csv_summary" and (source_label, target_label) in processed_lineages_d:
+                # @CTB check me... what is this doing?
                 continue
 
             # Assign indices to nodes
@@ -1809,17 +1812,18 @@ def process_csv_for_sankey(input_csv, csv_type):
                 node_map[target_label] = len(nodes)
                 nodes.append(target_label)
 
-            if source_label == 'Eukaryota':
-                print('XXX2', source_label, target_label, fraction)
+            # for tax_annotate output, sum across source/target pairs.
+            processed_lineages_d[(source_label, target_label)] += fraction
 
-            # Create a link between source and target
-            links.append({
-                "source": node_map[source_label],
-                "target": node_map[target_label],
-                "value": fraction
-            })
-            processed_lineages.add((source_label, target_label))  # Track added links
-            hover_texts.append(f"{source_label} → {target_label}<br>{fraction:.2f}%")
+    # create links & annotations:
+    for ((source_label, target_label), fraction) in processed_lineages_d.items():
+        links.append({
+            "source": node_map[source_label],
+            "target": node_map[target_label],
+            "value": fraction
+        })
+        hover_texts.append(f"{source_label} → {target_label}<br>{fraction:.2f}%")
+
     notify(f"loaded {n+1} rows from '{input_csv}'")
 
     return nodes, links, hover_texts
