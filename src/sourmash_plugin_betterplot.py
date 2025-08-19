@@ -1817,9 +1817,8 @@ def process_csv_for_sankey(input_csv, csv_type):
             source_label = lineage_parts[i].strip()
             target_label = lineage_parts[i + 1].strip()
 
-            # Since 'tax metagenome' is already summarized, skip duplicates to prevent overcounting
+            # Since 'tax metagenome -F csv_summary' is already summarized, we must skip duplicate {source, target} to prevent overcounting
             if csv_type == "csv_summary" and (source_label, target_label) in processed_lineages_d:
-                # @CTB check me... what is this doing?
                 continue
 
             # Assign indices to nodes
