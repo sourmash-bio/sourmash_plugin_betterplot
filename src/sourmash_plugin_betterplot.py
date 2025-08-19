@@ -215,6 +215,11 @@ def sample_d_to_idents(sample_d):
 
 
 def load_taxburst_json(filename, *, normalize_counts=True):
+    """
+    Load in JSON format output by taxburst.
+
+    Optionally normalize counts to fractions that sum to 1.
+    """
     with open(filename, 'rt') as fp:
         top_nodes = json.load(fp)
 
@@ -1920,7 +1925,7 @@ Build a sankey plot to visualize taxonomic profiling. Uses sourmash 'gather' -->
                 csv_type = "with-lineages"
                 required_headers = ["f_unique_weighted", "lineage"]
             else:
-                assert 0
+                assert 0, "unhandled input format"
 
             # Check if the required headers are present
             with open(input_csv, 'r') as file:
@@ -1934,7 +1939,8 @@ Build a sankey plot to visualize taxonomic profiling. Uses sourmash 'gather' -->
         elif args.taxburst_json:
             nodes, links, hover_texts = process_taxburst_for_sankey(args.taxburst_json)
             base_title = os.path.basename(args.taxburst_json.rsplit(".json")[0])
-
+        else:
+            assert 0, "unhandled input format"
 
         # Create Sankey diagram
         fig = go.Figure(go.Sankey(
@@ -2135,7 +2141,7 @@ Build a treemap with proportional representation of a metagenome taxonomy.
 
     def __init__(self, subparser):
         super().__init__(subparser)
-        subparser.add_argument('csvfile', help='csv_summary output from tax metagenome')
+        subparser.add_argument('inputfile', help='input taxonomy - by default, csv_summary output from tax metagenome')
         subparser.add_argument('-o', '--output', required=True,
                                help='output figure to this file')
         subparser.add_argument('-r', '--rank', default='phylum',
@@ -2143,9 +2149,9 @@ Build a treemap with proportional representation of a metagenome taxonomy.
         subparser.add_argument('-n', '--num-to-display', type=int,
                                default=25,
                                help="display at most these many taxa; aggregate the remainder (default: 25; 0 to display all)")
-        subparser.add_argument('--taxburst-json-in',
+        subparser.add_argument('--taxburst-json',
                                action='store_true',
-                               help='read in taxburst JSON format instead')
+                               help='input format is JSON from taxburst')
 
         
     def main(self, args):
@@ -2158,10 +2164,10 @@ def plot_treemap(args):
     import itertools
     cmap = colormaps['viridis']
 
-    if not args.taxburst_json_in:
-        df = pd.read_csv(args.csvfile)
+    if not args.taxburst_json:
+        df = pd.read_csv(args.inputfile)
 
-        print(f"reading input file '{args.csvfile}'")
+        print(f"reading input file '{args.inputfile}'")
         for colname in ('query_name', 'rank', 'f_weighted_at_rank', 'lineage'):
             if colname not in df.columns:
                 print(f"input is missing column '{colname}'; is this a csv_summary file?")
@@ -2178,8 +2184,8 @@ def plot_treemap(args):
         fractions.reverse()
         names.reverse()
     else:
-        assert args.taxburst_json_in
-        top_nodes = load_taxburst_json(args.csvfile)
+        assert args.taxburst_json
+        top_nodes = load_taxburst_json(args.inputfile)
 
         all_nodes = taxburst.tree_utils.collect_all_nodes(top_nodes)
         all_nodes = [ n for n in all_nodes if n["rank"] == args.rank ]
@@ -2190,8 +2196,6 @@ def plot_treemap(args):
 
         all_nodes.sort(key=lambda n: -n["count"])
         fractions = [ n["count"] for n in all_nodes ]
-        #total = sum(fractions)
-        #fractions = [ c/total for c in fractions ]
         names = [ n["name"] for n in all_nodes ]
 
     num = max(args.num_to_display, 0) # non-negative
