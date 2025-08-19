@@ -13,6 +13,7 @@ import csv
 from collections import defaultdict, Counter
 from itertools import chain, combinations
 import pickle
+import json
 
 import numpy
 import pylab
@@ -28,6 +29,8 @@ import upsetplot
 import pandas as pd
 import plotly.graph_objects as go
 import squarify
+import taxburst
+
 
 # this turns off a warning in presence_filter, but results in an error in
 # upsetplot :sweat_smile:
@@ -209,6 +212,17 @@ def sample_d_to_idents(sample_d):
         xx.append(ident)
 
     return xx
+
+
+def load_taxburst_json(filename, *, normalize_counts=True):
+    with open(filename, 'rt') as fp:
+        top_nodes = json.load(fp)
+
+    if normalize_counts:
+        taxburst.tree_utils.normalize_tree_counts(top_nodes)
+
+    return top_nodes
+
 
 #
 # CLI plugin code
@@ -1830,18 +1844,13 @@ def process_csv_for_sankey(input_csv, csv_type):
 
 
 def process_taxburst_for_sankey(input_file):
-    import json, taxburst
-    with open(input_file, 'rt') as fp:
-        top_nodes = json.load(fp)
-
-    taxburst.tree_utils.normalize_tree_counts(top_nodes)
-
     nodes = []  # List of unique taxonomy nodes
     node_map = {}  # Map taxonomic label to index
     links = []  # List of link connections with flow values
     hover_texts = []  # Custom hover text for percentages
     processed_lineages = set()  # Tracks added lineage links
 
+    top_nodes = load_taxburst_json(input_file)
     all_nodes = taxburst.tree_utils.collect_all_nodes(top_nodes)
 
     # Process each row in the dataset
@@ -1861,9 +1870,6 @@ def process_taxburst_for_sankey(input_file):
             if target_label not in node_map:
                 node_map[target_label] = len(nodes)
                 nodes.append(target_label)
-
-            if source_label == 'Eukaryota':
-                print('XXX', source_label, target_label, percent)
 
             # Create a link between source and target
             links.append({
@@ -2172,11 +2178,8 @@ def plot_treemap(args):
         fractions.reverse()
         names.reverse()
     else:
-        import json, taxburst
-        with open(args.csvfile, 'rt') as fp:
-            top_nodes = json.load(fp)
-
-        taxburst.tree_utils.normalize_tree_counts(top_nodes)
+        assert args.taxburst_json_in
+        top_nodes = load_taxburst_json(args.csvfile)
 
         all_nodes = taxburst.tree_utils.collect_all_nodes(top_nodes)
         all_nodes = [ n for n in all_nodes if n["rank"] == args.rank ]
