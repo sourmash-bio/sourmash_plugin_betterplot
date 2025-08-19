@@ -10,7 +10,7 @@ dependencies = ["sourmash>=4.9.2,<5", "sourmash_utils>=0.2",
                 "matplotlib", "numpy", "scipy", "scikit-learn",
                 "seaborn", "upsetplot", "matplotlib_venn", "pandas",
                 "plotly", "biopython", "ete3", "kaleido", "pyqt5",
-                "legacy_cgi", "squarify==0.4.4"]
+                "legacy_cgi", "squarify==0.4.4", "taxburst"]
 
 [build-system]
 requires = ["setuptools>=61.0"]
