@@ -18,11 +18,19 @@ rule all:
         "3sketches.venn.png",
         "weighted_venn.png",
         "tax-mg.sankey.png",
-        "tax-annot.sankey.png",
+        "taxburst.sankey.html",
         "disttree10sketches.matrix.png",
         "disttree10sketches.pairwise.png",
         "tax-mg.treemap.png",
+        "taxburst.treemap.png",
         "presence_filter.png",
+
+rule tax:
+    input:
+        "tax-mg.sankey.png",
+        "tax-mg.treemap.png",
+        "taxburst.treemap.png",
+        "taxburst.sankey.html",
 
 rule make_10sketches:
     input:
@@ -312,6 +320,15 @@ rule treemap_mgx_summary:
         sourmash scripts treemap {input} -o {output}
         """
 
+rule taxburst_treemap:
+    input:
+        "tax/SRR11125891.t0.lineages.json",
+    output:
+        "taxburst.treemap.png",
+    shell: """
+        sourmash scripts treemap --taxburst-json {input} -o {output}
+    """
+
 rule sankey_mgx_annotate:
     input:
         "tax/test.gather.with-lineages.csv"
@@ -321,6 +338,15 @@ rule sankey_mgx_annotate:
         """
         sourmash scripts sankey --annotate-csv {input} -o {output}
         """
+
+rule sankey_taxburst:
+    input:
+        "tax/SRR11125891.t0.lineages.json",
+    output:
+        "taxburst.sankey.html",
+    shell: """
+        sourmash scripts sankey --taxburst-json {input} -o {output}
+    """
 
 rule tree_10sketches_compare_matrix:
     input:

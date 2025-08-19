@@ -11,7 +11,9 @@ categories. It also includes support for sparse comparison output
 formats produced by the fast multithreaded `manysearch` and `pairwise`
 functions in the
 [branchwater plugin for sourmash](https://github.com/sourmash-bio/sourmash_plugin_branchwater).
-Finally, it includes a sankey/alluvial flow plot to visualize metagenomic profiling from the `sourmash gather` to `sourmash tax` workflow.
+Finally, it includes a sankey/alluvial flow plot and a treemap plot to
+visualize metagenomic profiling from the `sourmash gather` to
+`sourmash tax` workflow.
 
 ## Why does this plugin exist?
 
@@ -437,6 +439,10 @@ produces:
 
 By default, we will open an interactive `html` file. To output to a file, specify the file name with `-o` and use your desired filetype extension (.html, .png, .jpg, .jpeg, .pdf, or .svg). To specify the title, use `--title`.
 
+The `sankey` command also supports ingest of
+[taxburst's JSON format](https://taxburst.github.io/taxburst/command-line/#outputting-json-format),
+which allows `sankey` to be used with SingleM and Krona formats, among
+others.
 
 ### `tree` - plot Neighbor-Joining tree
 
@@ -481,6 +487,11 @@ sourmash scripts treemap tax/test.tax-mg.summarized.csv -o tax-mg.treemap.png
 produces:
 
 ![treemap visualization](examples/tax-mg.treemap.png)
+
+The `treemap` command also supports ingest of
+[taxburst's JSON format](https://taxburst.github.io/taxburst/command-line/#outputting-json-format),
+which allows `treemap` to be used with SingleM and Krona formats, among
+others.
 
 ### `presence_filter` - plot presence/abundance scatterplot of genomes detected by gather
 
