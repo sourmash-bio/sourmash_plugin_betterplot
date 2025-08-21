@@ -36,6 +36,8 @@ from sourmash.plugins import CommandLinePlugin
 import sourmash_utils
 from sourmash.cli.utils import (add_ksize_arg, add_moltype_args, add_scaled_arg)
 from typing import Dict, Iterator, Tuple, List
+from collections import Counter
+
 
 ### utility functions
 
@@ -1743,84 +1745,312 @@ def load_lingroups(map_csv):
     notify(f"loaded {len(lin2name)} lingroup names from '{map_csv}'")
     return lin2name
 
-def iter_lineage_pairs(lineage: str) -> Iterator[
-    Tuple[int, str, str, str, str]
-]:
-    """
-    Yield successive pairs along the lineage chain.
+def expand_with_ancestors_sum(rows, fraction_col):
+    """Expand rows with all ancestor paths, summing children if ancestor missing."""
+    lineage_fracs = {row["lineage"].strip(): float(row[fraction_col])
+                     for row in rows}
 
-    Yields (depth, src_path, src_raw, tgt_path, tgt_raw).
-    """
-    parts = [p.strip() for p in lineage.split(";") if p.strip()] #split lineage by semicolon and strip whitespace
-    cumulative: List[str] = []
-    for position, (src_raw, tgt_raw) in enumerate(zip(parts, parts[1:])):
-        cumulative.append(src_raw)
-        src_path = ";".join(cumulative)
-        tgt_path = ";".join(cumulative + [tgt_raw])
-        yield position, src_path, src_raw, tgt_path, tgt_raw
+    # collect all paths (lineages + their ancestors)
+    all_paths = set()
+    for lineage in lineage_fracs.keys():
+        parts = lineage.split(";")
+        for i in range(1, len(parts) + 1):
+            all_paths.add(";".join(parts[:i]))
 
-def want_pair(src_path: str, tgt_path: str, lin2name: Dict[str, str]) -> bool:
-    """Return True if this edge should be kept."""
-    if not lin2name:                            # no mapping → keep everything
-        return True
-    return src_path in lin2name and tgt_path in lin2name
+    # build parent -> children map
+    children = defaultdict(list)
+    for p in all_paths:
+        if ";" in p:
+            parent = ";".join(p.split(";")[:-1])
+            children[parent].append(p)
+
+    # fill missing ancestors by summing children
+    lineage_sums = dict(lineage_fracs)  # start with given values
+    # process paths from deepest to shallowest
+    for p in sorted(all_paths, key=lambda x: len(x.split(";")), reverse=True):
+        if p not in lineage_sums:
+            lineage_sums[p] = sum(lineage_sums[c] for c in children[p] if c in lineage_sums)
+
+    # return as rows
+    return [{"lineage": lin, fraction_col: frac} for lin, frac in lineage_sums.items()]
 
 def build_display(raw: str, path: str,
                   lin2name: Dict[str, str]) -> str:
     """Return label for node: '14 (Phyl II)' or just '14'."""
     return f"{raw} ({lin2name[path]})" if path in lin2name else raw
 
+def path_to_display(path: str, lin2name: dict[str, str]) -> str:
+    """Short on-canvas label: last code + optional friendly name."""
+    last_code = path.split(";")[-1]
+    if path in lin2name:
+        return f"{last_code} ({lin2name[path]})"
+    return last_code
+
+def make_hover(src_path: str, tgt_path: str,
+               frac: float, lin2name: dict[str, str]) -> str:
+    """Full path + friendly names in hover tooltip."""
+    def friendly(p):
+        return f"{p} ({lin2name[p]})" if p in lin2name else p
+    return (f"{friendly(src_path)} → {friendly(tgt_path)}"
+            f"<br>{frac:.2f}%")
+
+def print_expanded_summary(rows, fraction_col="f_unique_weighted", top_n=20):
+    """
+    Pretty-print expanded lineage rows, grouped by depth.
+    Also checks for duplicate lineages and total sum.
+    """
+    # Group by lineage
+    lineage_map = defaultdict(float)
+    for row in rows:
+        lineage_map[row["lineage"]] += float(row[fraction_col])
+
+    # Detect duplicates (lineages that appeared more than once)
+    duplicates = {lin: val for lin, val in lineage_map.items()
+                  if sum(1 for r in rows if r["lineage"] == lin) > 1}
+
+    # Print summary
+    print(f"Total unique lineages: {len(lineage_map)}")
+    print(f"Total raw rows: {len(rows)}")
+    if duplicates:
+        print(f"\n Found {len(duplicates)} duplicate lineages:")
+        for lin, val in list(duplicates.items())[:10]:
+            print(f"  {lin} → {val}")
+
+    # Compute global sum of root lineage(s)
+    roots = {lin: frac for lin, frac in lineage_map.items() if ";" not in lin}
+    print("\nRoot lineages and totals:")
+    for lin, frac in roots.items():
+        print(f"  {lin} → {frac:.6f}")
+
+    # Show a sample of expanded rows sorted by depth then lineage
+    print("\nSample expanded rows (first {} by depth):".format(top_n))
+    sorted_rows = sorted(lineage_map.items(), key=lambda kv: (len(kv[0].split(";")), kv[0]))
+    for lin, frac in sorted_rows[:top_n]:
+        depth = len(lin.split(";")) - 1
+        print(f"  {'  ' * depth}{lin} → {frac:.6f}")
+
+def is_lins_lineage(lineage: str) -> bool:
+    """Return True if lineage looks like a LIN (all tokens are integers)."""
+    parts = lineage.split(";")
+    return all(p.strip().isdigit() for p in parts if p.strip())
+
+def detect_lins(rows):
+    # Peek at the first 20 rows (or all if fewer)
+    sample = rows[:20]
+    return all(
+        is_lins_lineage(r["lineage"])
+        for r in sample
+        if "lineage" in r and r["lineage"] != "unclassified"
+    )
+
+def rows_to_edges(rows, fraction_key, lins=False, lin2name=None):
+    """
+    Convert expanded lineage rows into edges for Sankey.
+    Collapse passthrough nodes (1 child, no friendly name).
+    Deduplicate identical edges, but do not sum.
+    """
+    from collections import defaultdict
+
+    children = defaultdict(list)
+    for row in rows:
+        path = row["lineage"]
+        parts = path.split(";")
+        if len(parts) > 1:
+            parent = ";".join(parts[:-1])
+            children[parent].append(path)
+
+    def collapse_path(path: str) -> str:
+        while (
+            path in children
+            and len(children[path]) == 1
+            and (not lin2name or path not in lin2name)
+        ):
+            path = children[path][0]
+        return path
+
+    seen = set()
+    edges = []
+    for row in rows:
+        frac = float(row[fraction_key]) * 100
+        path = row["lineage"]
+        parts = path.split(";")
+        if len(parts) > 1:
+            parent = ";".join(parts[:-1])
+
+            eff_parent = collapse_path(parent)
+            eff_child = collapse_path(path)
+
+            if lins:
+                eff_parent = ";".join(f"p{i}:{tok}" for i, tok in enumerate(eff_parent.split(";")))
+                eff_child  = ";".join(f"p{i}:{tok}" for i, tok in enumerate(eff_child.split(";")))
+
+            edge = (eff_parent, eff_child, frac)
+            if edge not in seen:
+                edges.append(edge)
+                seen.add(edge)
+
+    return edges
+
+def pretty_print_edges(edges, lin2name=None, lins=False):
+    """
+    Pretty print edges for debugging.
+    - If lin2name is given, include friendly names.
+    - If lins=True, show depth-coded nodes (p0:864 etc).
+    """
+    def friendly(path):
+        if not path:
+            return "<root>"
+        if lin2name and path in lin2name:
+            return f"{path} ({lin2name[path]})"
+        return path
+
+    print("Edges:")
+    for src, tgt, frac in edges:
+        if lins:
+            # keep the p0:/p1: prefixes visible
+            print(f"  {src} → {tgt}   ({frac:.2f}%)")
+        else:
+            print(f"  {friendly(src)} → {friendly(tgt)}   ({frac:.2f}%)")
+
+
+def print_rows(rows, fraction_key, title="Rows"):
+    print(f"\n--- {title} ({len(rows)} rows) ---")
+    for row in sorted(rows, key=lambda r: (r["lineage"].count(";"), r["lineage"])):
+        lineage = row["lineage"]
+        frac = float(row[fraction_key])
+        print(f"{lineage:<40}  {frac:.4f}")
+
+
+def build_links_taxonomy(rows, fraction_key, csv_type):
+    """Link builder for taxonomy CSVs with non-integer names."""
+    nodes, node_map, links, hover_texts = [], {}, [], []
+    processed_lineages = set()  # Track processed lineage pairs to avoid duplicates
+    for (n, row) in enumerate(rows):
+        fraction = float(row[fraction_key]) * 100 # Convert to percentage
+        lineage_parts = row["lineage"].split(";") # Taxonomic hierarchy
+
+        # Iterate through lineage levels and create source-target links
+        for i in range(len(lineage_parts) - 1):
+            source_label, target_label = lineage_parts[i].strip(), lineage_parts[i+1].strip()
+
+            # Since 'tax metagenome' is already summarized, skip duplicates to prevent overcounting
+            if csv_type == "csv_summary" and (source_label, target_label) in processed_lineages:
+                continue
+
+            for label in (source_label, target_label):
+                if label not in node_map:
+                    node_map[label] = len(nodes)
+                    nodes.append(label)
+            links.append({
+                "source": node_map[source_label],
+                "target": node_map[target_label],
+                "value": fraction,
+            })
+            processed_lineages.add((source_label, target_label))  # Track added links
+            hover_texts.append(f"{source_label} → {target_label}<br>{fraction:.2f}%")
+    notify(f"Built {len(nodes)} nodes and {len(links)} links from {len(rows)} rows.")
+    return nodes, links, hover_texts
+
+def strip_prefix(path: str) -> str:
+    """Remove p0:, p1:, ... prefixes from a lineage path (safe for non-LINs too)."""
+    if not path:
+        return path
+    return ";".join(seg.split(":", 1)[-1] for seg in path.split(";"))
+
+def edges_to_links(edges, lin2name=None):
+    """
+    Turn (src_id, tgt_id, frac) edges into Plotly Sankey inputs.
+
+    - Node identity = internal IDs from edges (may include pN: prefixes)
+    - Node label    = pretty display (prefixes stripped, then lin2name if present)
+    - Hover text    = full raw paths (prefixes stripped) via make_hover
+    """
+    lin2name = lin2name or {}
+
+    node_map = {}     # internal_id -> index
+    labels = []       # display labels aligned with node indices
+    links = []        # dicts with source/target/value
+    hovers = []       # hover strings aligned with links
+
+    for src_id, tgt_id, frac in edges:
+        # guard: skip true self-loops (same internal node)
+        if src_id == tgt_id:
+            continue
+
+        # prefix-stripped (raw) for display + hover + lin2name lookup
+        src_raw = strip_prefix(src_id)
+        tgt_raw = strip_prefix(tgt_id)
+
+        src_label = path_to_display(src_raw, lin2name)
+        tgt_label = path_to_display(tgt_raw, lin2name)
+
+        # register/internal indexing by ID
+        for nid, lbl in ((src_id, src_label), (tgt_id, tgt_label)):
+            if nid not in node_map:
+                node_map[nid] = len(labels)
+                labels.append(lbl)
+
+        links.append({
+            "source": node_map[src_id],
+            "target": node_map[tgt_id],
+            "value": float(frac),   # already in %
+        })
+        hovers.append(make_hover(src_raw, tgt_raw, float(frac), lin2name))
+
+    return labels, links, hovers
+
 
 def process_csv_for_sankey(input_csv, csv_type, lingroup_map=None):
     lin2name = load_lingroups(lingroup_map) if lingroup_map else {}
-    nodes = []  # List of unique taxonomy nodes
-    node_map = {}  # Map taxonomic label to index
-    links = []  # List of link connections with flow values
-    hover_texts = []  # Custom hover text for percentages
-    processed_lineages = set()  # Tracks added lineage links
 
     # Determine the appropriate headers based on csv_type
     if csv_type == "csv_summary":
         fraction_col = "f_weighted_at_rank"
+        notify(f"CSV type is 'csv_summary', using '{fraction_col}' for fractions.")
     elif csv_type == "with-lineages":
         fraction_col = "f_unique_weighted"
+        notify(f"CSV type is 'with-lineages', using '{fraction_col}' for fractions.")
     else:
         raise ValueError("Invalid csv_type. Use 'csv_summary' or 'with-lineages'.")
 
-    # Read CSV file
+    # Read CSV file, building lingroup map from csv_summary if needed and available
     with open(input_csv, newline="") as inF:
         rows = list(csv.DictReader(inF))
-
-        for row in rows:
-            frac = float(row[fraction_col]) * 100 # Convert to percentage
-            for position, src_path, src_raw, tgt_path, tgt_raw in \
-                    iter_lineage_pairs(row["lineage"]):
-
-                # ── optional filtering on lingroups -- #
-                if not want_pair(src_path, tgt_path, lin2name):
-                    continue
-
-                src_disp = build_display(src_raw, src_path, lin2name)
-                tgt_disp = build_display(tgt_raw, tgt_path, lin2name)
-                src_lbl  = f"p{position}:{src_disp}"
-                tgt_lbl  = f"p{position+1}:{tgt_disp}"
-
-                # Since 'tax metagenome' is already summarized, skip duplicates to prevent overcounting
-                if csv_type == "csv_summary" and (src_lbl, tgt_lbl) in processed_lineages:
-                    continue
-
-                for lbl in (src_lbl, tgt_lbl):
-                    if lbl not in node_map:
-                        node_map[lbl] = len(nodes)
-                        nodes.append(lbl)
-
-                links.append({"source": node_map[src_lbl],
-                            "target": node_map[tgt_lbl],
-                            "value": frac})
-                hover_texts.append(f"{src_disp} → {tgt_disp}<br>{frac:.3f}%")
-                processed_lineages.add((src_lbl, tgt_lbl))
-
+        header = rows[0].keys() if rows else []
         notify(f"loaded {len(rows)} rows from '{input_csv}'")
+
+    lins_mode = detect_lins(rows)
+
+    if lins_mode:
+        notify("Detected LINS mode: all lineages are LINs (integers only).")
+        if csv_type == "csv_summary":
+            if "lingroup" in header:
+                notify("'lingroup' column found in csv_summary; using it for display.")
+                # build lin2name from the 'lingroup' column
+                for row in rows:
+                    if "lingroup" in row and row["lingroup"].strip():
+                        lin2name[row["lineage"]] = row.get("lingroup", "").strip()
+            elif lin2name:
+                notify(f"No 'lingroup' column in csv_summary, using lingroup map from '{lingroup_map}'.")
+            else:
+                notify("No lingroup map provided; using raw 'LIN' lineages.")
+        elif lin2name:
+            notify(f"Using lingroup map from '{lingroup_map}' with {len(lin2name)} entries.")
+
+        if lin2name:
+            # first, make sure we reconstruct all lineage paths from named lingroups
+            rows = expand_with_ancestors_sum(rows, fraction_col)
+            print_rows(rows, fraction_col, title="Expanded Rows")
+            notify(f"Expanded with ancestors: now {len(rows)} rows")
+            print_expanded_summary(rows, fraction_col=fraction_col, top_n=120)
+        edges = rows_to_edges(rows, fraction_col, lins=True)
+        nodes, links, hover_texts = edges_to_links(edges, lin2name=lin2name)
+
+        # pretty_print_edges(edges, lins=True)
+
+    # not LINS? Just use the rows as is.
+    else:
+        nodes, links, hover_texts = build_links_taxonomy(rows, fraction_col, csv_type)
 
     return nodes, links, hover_texts
 
@@ -1842,7 +2072,7 @@ Build a sankey plot to visualize taxonomic profiling. Uses sourmash 'gather' -->
         group = subparser.add_mutually_exclusive_group(required=True)
         group.add_argument("--summary-csv", type=str, help="Path to csv_summary generated by running 'sourmash tax metagenome' on a sourmash gather csv")
         group.add_argument("--annotate-csv", type=str, help="Path to 'with-lineages' file generated by running 'sourmash tax annotate' on a sourmash gather csv")
-        subparser.add_argument("--lingroups", type=str, help="Path to 'lingroups' file to enable lingroup labeling in the Sankey diagram. This file should contain a mapping of lineage to lingroup.")
+        subparser.add_argument("--lingroups", type=str, help="Path to 'lingroups' file (lineage to lingroup mapping) to enable lingroup labeling in the Sankey diagram. Not needed if `csv_summary` was generated with `--lingroups` file provided.")
         
         subparser.add_argument("-o", "--output", type=str, help="output file for alluvial flow diagram")
         subparser.add_argument("--title", type=str, help="Plot title (default: use input filename)")
