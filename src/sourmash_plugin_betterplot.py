@@ -872,6 +872,10 @@ class Command_Clustermap1(CommandLinePlugin):
             "--no-y-labels", action="store_true",
             help="disable Y axis labels"
         )
+        subparser.add_argument(
+            "--sort-by-category", action="store_true",
+            help="Sort rows by category, instead of clustering them"
+        )
 
     def main(self, args):
         super().main(args)
@@ -881,13 +885,29 @@ class Command_Clustermap1(CommandLinePlugin):
         # pick out all the distinct queries/matches.
         notify(f"loaded {len(rows)} rows from '{args.manysearch_csv}'")
 
-        query_d = manysearch_rows_to_index(rows, column_name='query_name')
-        against_d = manysearch_rows_to_index(rows, column_name='match_name')
 
+        # optional sorting samples by category 
+        if args.sort_by_category:
+            query_d = manysearch_rows_to_index(rows, column_name='query_name')
+            # make df for color input
+            df_col = pd.read_csv(args.row_categories_csv)
+            # make a df from query d
+            df_query = pd.DataFrame(list(query_d.items()), columns=['label', 'order'])
+            # merge, sort on category and reorder
+            df_col = df_col.merge(df_query, on='label')
+            df_col = df_col.sort_values(by=['category'])
+            df_col['order'] = range(len(df_col))
+            # put reordered back into a dict
+            query_d = df_col.set_index('label')['order'].to_dict()
+        else:
+            query_d = manysearch_rows_to_index(rows, column_name='query_name')
+
+        against_d = manysearch_rows_to_index(rows, column_name='match_name')
         notify(f"loaded {len(query_d)} x {len(against_d)} total elements")
 
         query_d_items = list(sorted(query_d.items(), key=lambda x: x[1]))
         against_d_items = list(sorted(against_d.items(), key=lambda x: x[1]))
+
 
         mat = numpy.zeros((len(query_d), len(against_d)))
 
@@ -927,6 +947,7 @@ class Command_Clustermap1(CommandLinePlugin):
         if args.boolean:        # turn off colorbar if boolean.
             kw_args['cbar_pos'] = None
 
+
         yticklabels=sample_d_to_idents(query_d_items)
         xticklabels=sample_d_to_idents(against_d_items)
         if args.no_labels:
@@ -937,6 +958,11 @@ class Command_Clustermap1(CommandLinePlugin):
         elif args.no_y_labels:
             yticklabels = []
 
+        if args.sort_by_category:
+            row_cluster=False
+        else:
+            row_cluster=True
+
         # turn into dissimilarity matrix
         # plot!
         fig = sns.clustermap(
@@ -945,6 +971,7 @@ class Command_Clustermap1(CommandLinePlugin):
             vmin=args.vmin,
             vmax=args.vmax,
             col_colors=col_colors,
+            row_cluster=row_cluster,
             row_colors=row_colors,
             xticklabels=xticklabels,
             yticklabels=yticklabels,
