@@ -2006,10 +2006,10 @@ def process_csv_for_sankey(input_csv, csv_type, lingroup_map=None):
     # Determine the appropriate headers based on csv_type
     if csv_type == "csv_summary":
         fraction_col = "f_weighted_at_rank"
-        notify(f"CSV type is 'csv_summary', using '{fraction_col}' for fractions.")
+        notify(f"CSV type is 'csv_summary': using '{fraction_col}' for fractions.")
     elif csv_type == "with-lineages":
         fraction_col = "f_unique_weighted"
-        notify(f"CSV type is 'with-lineages', using '{fraction_col}' for fractions.")
+        notify(f"CSV type is 'with-lineages': using '{fraction_col}' for fractions.")
     else:
         raise ValueError("Invalid csv_type. Use 'csv_summary' or 'with-lineages'.")
 
@@ -2022,7 +2022,7 @@ def process_csv_for_sankey(input_csv, csv_type, lingroup_map=None):
     lins_mode = detect_lins(rows)
 
     if lins_mode:
-        notify("Detected LINS mode: all lineages are LINs (integers only).")
+        notify("Detected LINS lineages (integers only).")
         if csv_type == "csv_summary":
             if "lingroup" in header:
                 notify("'lingroup' column found in csv_summary; using it for display.")
@@ -2036,13 +2036,16 @@ def process_csv_for_sankey(input_csv, csv_type, lingroup_map=None):
                 notify("No lingroup map provided; using raw 'LIN' lineages.")
         elif lin2name:
             notify(f"Using lingroup map from '{lingroup_map}' with {len(lin2name)} entries.")
+        else:
+            notify("No lingroup map provided; using raw 'LIN' lineages.")
 
-        if lin2name:
-            # first, make sure we reconstruct all lineage paths from named lingroups
-            rows = expand_with_ancestors_sum(rows, fraction_col)
-            print_rows(rows, fraction_col, title="Expanded Rows")
-            notify(f"Expanded with ancestors: now {len(rows)} rows")
-            print_expanded_summary(rows, fraction_col=fraction_col, top_n=120)
+        # first, make sure we reconstruct all lineage paths from named lingroups
+        rows = expand_with_ancestors_sum(rows, fraction_col)
+        print_rows(rows, fraction_col, title="Expanded Rows")
+        notify(f"Expanded with ancestors: now {len(rows)} rows")
+        print_expanded_summary(rows, fraction_col=fraction_col, top_n=120)
+        # note, this is set up to collapse paths that are single-child passthroughs,
+        # might want to add an option to disable that.
         edges = rows_to_edges(rows, fraction_col, lins=True)
         nodes, links, hover_texts = edges_to_links(edges, lin2name=lin2name)
 
