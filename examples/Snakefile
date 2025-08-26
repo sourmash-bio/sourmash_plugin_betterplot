@@ -21,6 +21,8 @@ rule all:
         "tax-annot.sankey.png",
         "disttree10sketches.matrix.png",
         "disttree10sketches.pairwise.png",
+        "tax-mg.treemap.png",
+        "presence_filter.png",
 
 rule make_10sketches:
     input:
@@ -300,6 +302,16 @@ rule sankey_mgx_summary:
         sourmash scripts sankey --summary-csv {input} -o {output}
         """
 
+rule treemap_mgx_summary:
+    input:
+        "tax/test.tax-mg.summarized.csv"
+    output:
+        png="tax-mg.treemap.png"
+    shell:
+        """
+        sourmash scripts treemap {input} -o {output}
+        """
+
 rule sankey_mgx_annotate:
     input:
         "tax/test.gather.with-lineages.csv"
@@ -332,3 +344,17 @@ rule tree_10sketches_compare_pairwise:
         sourmash scripts tree --pairwise-csv {input.pairwise} \
                 -o {output.png}
         """
+
+rule presence_filter:
+    input:
+        "tax/SRR11125891.gather.with-lineages.csv",
+    output:
+        "presence_filter.png",
+    shell: """
+        sourmash scripts presence_filter \
+            tax/SRR11125891.gather.with-lineages.csv \
+            -o presence_filter.png \
+            -N 10 \
+            --green-color Entero --red-color Clostr
+    """
+

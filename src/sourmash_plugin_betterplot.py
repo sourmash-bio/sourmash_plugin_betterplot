@@ -1,3 +1,4 @@
+
 """betterplot plugin implementation"""
 
 epilog = """
@@ -16,6 +17,7 @@ import pickle
 import numpy
 import pylab
 import matplotlib.pyplot as plt
+from matplotlib import colormaps
 from matplotlib_venn import venn2, venn3
 import scipy.cluster.hierarchy as sch
 from sklearn.manifold import MDS, TSNE
@@ -25,6 +27,11 @@ import seaborn as sns
 import upsetplot
 import pandas as pd
 import plotly.graph_objects as go
+import squarify
+
+# this turns off a warning in presence_filter, but results in an error in
+# upsetplot :sweat_smile:
+#pd.options.mode.copy_on_write = True
 
 from Bio import Phylo
 from Bio.Phylo.TreeConstruction import DistanceTreeConstructor, DistanceMatrix
@@ -1140,6 +1147,7 @@ class Command_Upset(CommandLinePlugin):
             min_subset_size = args.min_subset_size
             notify(f"setting min_subset_size='{min_subset_size}' (percentage)")
 
+        print(data)
         upsetplot.plot(data, sort_by=args.sort_by,
                        min_subset_size=min_subset_size,
                        show_percentages=args.show_percentages)
@@ -1573,7 +1581,7 @@ the first sketch.
             sketches.extend(x)
 
         if len(sketches) != 2:
-            error("ERROR: {len(sketches)} sketches found. Must supply exactly 2.")
+            error(f"ERROR: {len(sketches)} sketches found. Must supply exactly 2.")
             sys.exit(-1)
 
         mh1 = sketches[0].minhash
@@ -1655,10 +1663,16 @@ against average abund for significant matches.
         subparser.add_argument('-o', '--output', default=None,
                                help="save image to this file",
                                required=True)
-        subparser.add_argument('-N', '--min-num-hashes',
+        subparser.add_argument('-N', '--min-num-hashes', type=int,
                                default=3, help='threshold (default: 3)')
+        subparser.add_argument('--min-ani', type=float, default=0.0,
+                               help='ANI threshold (default: None)')
+        subparser.add_argument('--min-fraction', type=float, default=0.0,
+                               help='detection threshold (default: None)')
         subparser.add_argument('--detection', action="store_true",
                                default=True)
+        subparser.add_argument('--detection-column-name',
+                               default='f_match_orig')
         subparser.add_argument('--ani', dest='detection',
                                action="store_false")
         subparser.add_argument('--green-color',
@@ -1676,12 +1690,25 @@ against average abund for significant matches.
         assert len(scaled) == 1
         scaled = list(scaled)[0]
 
-        threshold = args.min_num_hashes * scaled
-        df = df[df['unique_intersect_bp'] >= threshold]
-        notify(f"filtered down to {len(df)} rows with unique_intersect_bp >= {threshold}")
+        if 'name' in df.columns:
+            df['match_name'] = df['name'] # correct for gather/fastgather column names
+
+        notify(f"loaded {len(df)} rows.")
+        if args.min_num_hashes:
+            threshold = args.min_num_hashes * scaled
+            df = df[df['unique_intersect_bp'] >= threshold]
+            notify(f"filtered down to {len(df)} rows with unique_intersect_bp >= {threshold}")
+
+        if args.min_ani:
+            df = df[df['match_containment_ani'] >= args.min_ani]
+            notify(f"filtered down to {len(df)} rows with match_containment_ani >= {args.min_ani} (--min-ani)")
+
+        if args.min_fraction:
+            df = df[df[args.detection_column_name] >= args.min_fraction]
+            notify(f"filtered down to {len(df)} rows with {args.detection_column_name} >= {args.min_fraction} (--min-fraction)")
 
         if args.detection:
-            plt.plot(df.f_match_orig, df.average_abund, 'k.')
+            plt.plot(df[args.detection_column_name], df.average_abund, 'k.')
         else:
             plt.plot(df.match_containment_ani, df.average_abund, 'k.')
 
@@ -1707,19 +1734,22 @@ against average abund for significant matches.
         for (df2, color) in zip(dfs, colors):
             if args.detection:
                 plt.plot(df2.f_match_orig, df2.average_abund, color)
-            else:
+            else:               # ANI!
                 plt.plot(df2.match_containment_ani, df2.average_abund, color)
 
         ax = plt.gca()
-        ax.set_ylabel('number of copies')
         ax.set_yscale('log')
 
         if args.detection:
             ax.set_xlabel('fraction of genome detected')
+            ax.set_xlim((0, 1))
         else:
             ax.set_xlabel('cANI of match')
 
+        ax.set_ylabel('log abundance (copy number)')
+
         notify(f"saving figure to '{args.output}'")
+        plt.tight_layout()
         plt.savefig(args.output)
 
 def save_sankey_diagram(fig, output_file):
@@ -2279,3 +2309,109 @@ Build a neighbor-joining tree from 'sourmash compare' or 'sourmash scripts pairw
             os.environ['QT_QPA_PLATFORM']='offscreen'
         if args.show or args.output:
             plot_tree_ete(tree, args.tree_layout, output_image=args.output, show=args.show)
+
+
+class Command_TreeMap(CommandLinePlugin):
+    command = 'treemap'
+    description = """\
+Build a treemap with proportional representation of a metagenome taxonomy.
+"""
+
+    usage = """
+   sourmash scripts treemap csv_summary -o treemap.png [ -r <rank> ]
+"""
+    epilog = epilog
+    formatter_class = argparse.RawTextHelpFormatter
+
+    def __init__(self, subparser):
+        super().__init__(subparser)
+        subparser.add_argument('csvfile', help='csv_summary output from tax metagenome')
+        subparser.add_argument('-o', '--output', required=True,
+                               help='output figure to this file')
+        subparser.add_argument('-r', '--rank', default='phylum',
+                               help='display at this rank')
+        subparser.add_argument('-n', '--num-to-display', type=int,
+                               default=25,
+                               help="display at most these many taxa; aggregate the remainder (default: 25; 0 to display all)")
+
+        
+    def main(self, args):
+        super().main(args)
+        plot_treemap(args)
+
+
+def plot_treemap(args):
+    from string import ascii_lowercase
+    import itertools
+    cmap = colormaps['viridis']
+
+    df = pd.read_csv(args.csvfile)
+
+    print(f"reading input file '{args.csvfile}'")
+    for colname in ('query_name', 'rank', 'f_weighted_at_rank', 'lineage'):
+        if colname not in df.columns:
+            print(f"input is missing column '{colname}'; is this a csv_summary file?")
+            sys.exit(-1)
+
+    df = df.sort_values(by='f_weighted_at_rank')
+
+    # select rank
+    df2 = df[df['rank'] == args.rank]
+    df2['name'] = df2['lineage'].apply(lambda x: x.split(';')[-1])
+
+    fractions = list(df2['f_weighted_at_rank'].tolist())
+    names = list(df2['name'].tolist())
+    fractions.reverse()
+    names.reverse()
+
+    num = max(args.num_to_display, 0) # non-negative
+    num = min(args.num_to_display, len(names)) # list of names
+    if num:
+        display_fractions = fractions[:num]
+        display_names = names[:num]
+
+        print(f'treemap: displaying {num} taxa of {len(fractions)} total')
+        if fractions[num:]:
+            remaining = fractions[num:]
+            remainder = sum(remaining)
+            display_fractions.append(remainder)
+            display_names.append(f'{len(remaining)} remaining taxa')
+            print(f'aggregating {len(remaining)} remaining taxa into one box')
+
+        fractions, names = display_fractions, display_names
+
+    # use to build labels: a, b, c..., aa, ab, ac...
+    def iter_all_strings():
+        for size in itertools.count(1):
+            for s in itertools.product(ascii_lowercase, repeat=size):
+                yield "".join(s)
+
+    labels = []
+    for name, label in zip(names, iter_all_strings()):
+        labels.append(label)
+
+    # Create treemap
+    fig, ax = plt.subplots(figsize=(8, 6))
+
+    squarify.plot(sizes=fractions, label=labels,
+                  alpha=0.7, ax=ax,
+                  color=cmap(numpy.linspace(1, 0, len(labels)))
+    )
+    plt.axis('off')
+
+    # Position the text on the right side
+    # The x-coordinate (1.05) places the text slightly outside the right edge of the axes.
+    # The y-coordinate is calculated to distribute the text vertically.
+    # 'ha' (horizontal alignment) is set to 'left' to align the text from its left edge.
+    # 'va' (vertical alignment) is set to 'center' to center the text vertically.
+    # 'transform=ax.transAxes' ensures coordinates are relative to the axes.
+
+    for i, (name, label, f) in enumerate(zip(names, labels, fractions)):
+        y_position = 0.95 - (i * 0.035)  # Adjust for desired spacing and starting point
+        ax.text(1.03, y_position, f'{label}: {name} ({f*100:.1f}%)',
+                ha='left', va='center', transform=ax.transAxes, fontsize=10)
+
+    plt.tight_layout()
+
+    print(f"saving output to '{args.output}'")
+    plt.savefig(args.output)
