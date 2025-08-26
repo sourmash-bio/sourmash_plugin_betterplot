@@ -31,11 +31,10 @@ from Bio.Phylo.TreeConstruction import DistanceTreeConstructor, DistanceMatrix
 
 import sourmash
 from sourmash import sourmash_args
-from sourmash.logging import debug_literal, error, notify, print_results
+from sourmash.logging import debug_literal, error, notify
 from sourmash.plugins import CommandLinePlugin
 import sourmash_utils
 from sourmash.cli.utils import (add_ksize_arg, add_moltype_args, add_scaled_arg)
-from typing import Dict, Iterator, Tuple, List
 from collections import Counter
 
 
@@ -1774,13 +1773,8 @@ def expand_with_ancestors_sum(rows, fraction_col):
     # return as rows
     return [{"lineage": lin, fraction_col: frac} for lin, frac in lineage_sums.items()]
 
-def build_display(raw: str, path: str,
-                  lin2name: Dict[str, str]) -> str:
-    """Return label for node: '14 (Phyl II)' or just '14'."""
-    return f"{raw} ({lin2name[path]})" if path in lin2name else raw
-
 def path_to_display(path: str, lin2name: dict[str, str]) -> str:
-    """Short on-canvas label: last code + optional friendly name."""
+    """Return label for node: '14 (Phyl II)' or just '14'."""
     last_code = path.split(";")[-1]
     if path in lin2name:
         return f"{last_code} ({lin2name[path]})"
@@ -2048,7 +2042,6 @@ def process_csv_for_sankey(input_csv, csv_type, lingroup_map=None):
         # might want to add an option to disable that.
         edges = rows_to_edges(rows, fraction_col, lins=True)
         nodes, links, hover_texts = edges_to_links(edges, lin2name=lin2name)
-
         # pretty_print_edges(edges, lins=True)
 
     # not LINS? Just use the rows as is.
