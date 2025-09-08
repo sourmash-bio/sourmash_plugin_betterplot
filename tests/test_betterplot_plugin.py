@@ -8,11 +8,21 @@ import sourmash
 import sourmash_tst_utils as utils
 from sourmash_tst_utils import SourmashCommandFailed
 from sourmash import sourmash_args
+from collections import defaultdict
 
 from sourmash_plugin_betterplot import (load_labelinfo_csv,
                                         load_categories_csv_for_labels,
                                         load_categories_csv,
-                                        manysearch_rows_to_index)
+                                        manysearch_rows_to_index,
+                                        expand_with_ancestors_sum,
+                                        is_lins_lineage,
+                                        detect_lins,
+                                        rows_to_edges,
+                                        edges_to_links,
+                                        build_links_taxonomy,
+                                        strip_prefix,
+                                        path_to_display,
+                                        make_hover)
 
 
 def test_run_sourmash(runtmp):
@@ -50,3 +60,140 @@ def test_load_categories_for_labels():
     assert len(sample_d) == 10     # dict: sample name to sample index
     assert len(category_map) == 5  # dict: categories -> colors mapping
     assert len(colors) == 10       # list: labels => colors, in sort order
+
+
+def test_expand_with_ancestors_sum_simple_taxonomy():
+    rows = [{"lineage": "a;b;c", "frac": 1.0}]
+    expanded = expand_with_ancestors_sum(rows, "frac")
+
+    # Should include all ancestors: a, a;b, a;b;c
+    labels = {r["lineage"] for r in expanded}
+    assert {"a", "a;b", "a;b;c"} <= labels
+
+    # Fractions should propagate upward
+    lineage_map = {r["lineage"]: r["frac"] for r in expanded}
+    assert lineage_map["a;b;c"] == 1.0
+    assert lineage_map["a;b"] == 1.0
+    assert lineage_map["a"] == 1.0
+
+def test_expand_with_ancestors_sum_multiple_children():
+    rows = [
+        {"lineage": "a;b;c1", "frac": 2.0},
+        {"lineage": "a;b;c2", "frac": 3.0},
+    ]
+    expanded = expand_with_ancestors_sum(rows, "frac")
+    lineage_map = {r["lineage"]: r["frac"] for r in expanded}
+
+    # parent a;b should sum c1 + c2
+    assert lineage_map["a;b"] == pytest.approx(5.0)
+    # root a should also be 5.0
+    assert lineage_map["a"] == pytest.approx(5.0)
+
+def test_is_and_detect_lins():
+    assert is_lins_lineage("0;1;2")
+    assert not is_lins_lineage("a;1;2")
+
+    rows = [{"lineage": "0;1;1"}, {"lineage": "0;2;3"}]
+    assert detect_lins(rows)
+
+    rows = [{"lineage": "a;b;c"}]
+    assert not detect_lins(rows)
+
+def test_rows_to_edges_basic():
+    rows = [
+        {"lineage": "a;b", "frac": 0.2},
+        {"lineage": "a;b;c", "frac": 0.15},
+        {"lineage": "a;b;d", "frac": 0.05},
+    ]
+    edges = rows_to_edges(rows, "frac", lins=False)
+    # Expect edges (a->a;b, a;b->a;b;c)
+    edge_paths = {(src, tgt) for src, tgt, _ in edges}
+    assert ("a;b", "a;b") in edge_paths
+    assert ("a;b", "a;b;c") in edge_paths
+    assert ("a;b", "a;b;d") in edge_paths
+    assert len(edges) == 3
+    # Check percents for each edge
+    edge_map = {(src, tgt): frac for src, tgt, frac in edges}
+    assert edge_map[("a;b", "a;b")] == pytest.approx(20.0)
+    assert edge_map[("a;b", "a;b;c")] == pytest.approx(15.0)
+    assert edge_map[("a;b", "a;b;d")] == pytest.approx(5.0)
+
+
+def test_rows_to_edges_with_lins_prefixing():
+    rows = [{"lineage": "0;1", "frac": 1.0}]
+    edges = rows_to_edges(rows, "frac", lins=True)
+    print(edges)
+    # should prefix with p0:/p1:
+    src, tgt, frac = edges[0]
+    assert src.startswith("p0:")
+    assert tgt.startswith("p0:")
+    assert frac == 100.0  # fraction converted to percent
+
+
+def test_edges_to_links_roundtrip():
+    edges = [("a", "a;b", 50.0), ("a;b", "a;b;c", 25.0)]
+    labels, links, hovers = edges_to_links(edges)
+
+    assert "a" in "".join(labels)
+    assert any("a → a;b" in h for h in hovers)
+    # Links use numeric indices
+    assert all(isinstance(link["source"], int) for link in links)
+
+
+def test_build_links_taxonomy_simple():
+    rows = [
+        {"lineage": "a;b;c", "f_unique_weighted": 0.5},
+        {"lineage": "a;b;d", "f_unique_weighted": 0.5},
+    ]
+    nodes, links, hovers = build_links_taxonomy(rows, "f_unique_weighted", csv_type="with-lineages")
+    assert "a" in nodes and "b" in nodes
+    assert any("a → b" in h for h in hovers)
+
+
+def test_strip_prefix_and_display():
+    path = "p0:1;p1:2"
+    stripped = strip_prefix(path)
+    assert stripped == "1;2"
+
+    # test display mapping
+    lin2name = {"1;2": "GroupX"}
+    disp = path_to_display("1;2", lin2name)
+    assert "GroupX" in disp
+
+def test_make_hover_with_lin2name():
+    lin2name = {"a;b": "GroupAB"}
+    hover = make_hover("a", "a;b", 12.3456, lin2name)
+    assert "GroupAB" in hover
+    assert "12.35%" in hover
+
+
+def test_rows_to_edges_collapses_passthrough():
+    rows = [
+        {"lineage": "a;b", "frac": 0.5},
+        {"lineage": "a;b;c", "frac": 0.5},
+    ]
+    edges = rows_to_edges(rows, "frac", lins=False, lin2name={})
+    edge_paths = {(src, tgt) for src, tgt, _ in edges}
+    # 'a;b' collapsed, so only "a;b;c → a;b;c"
+    assert ("a;b;c", "a;b;c") in edge_paths
+
+
+def test_rows_to_edges_collapses_passthrough_2():
+    rows = [
+        {"lineage": "a;b", "frac": 0.5},
+        {"lineage": "a;b;c", "frac": 0.5},
+        {"lineage": "a;b;c;d", "frac": 0.2},
+        {"lineage": "a;b;c;e", "frac": 0.3},
+        {"lineage": "a;b;c;e;f", "frac": 0.3},
+    ]
+    edges = rows_to_edges(rows, "frac", lins=False, lin2name={})
+    edge_paths = {(src, tgt) for src, tgt, _ in edges}
+    # 'a;b' collapsed, so root is "a;b;c → a;b;c"
+    assert ("a;b;c", "a;b;c") in edge_paths
+    # 'a;b;c;e' collapsed, so "a;b;c → a;b;c;e;f"
+    assert ("a;b;c", "a;b;c;e;f") in edge_paths
+    # 'a;b;c;d' NOT collapsed, so "a;b;c → a;b;c;d"
+    assert ("a;b;c", "a;b;c;d") in edge_paths
+    assert len(edges) == 4  # 4 edges total
+    # note: self edges are ignored for display
+    # edges we have: [('a;b;c', 'a;b;c', 50.0), ('a;b;c', 'a;b;c;d', 20.0), ('a;b;c', 'a;b;c;e;f', 30.0), ('a;b;c;e;f', 'a;b;c;e;f', 30.0)]

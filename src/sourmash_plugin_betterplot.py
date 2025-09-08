@@ -1803,12 +1803,14 @@ def expand_with_ancestors_sum(rows, fraction_col):
     # return as rows
     return [{"lineage": lin, fraction_col: frac} for lin, frac in lineage_sums.items()]
 
-def path_to_display(path: str, lin2name: dict[str, str]) -> str:
+def path_to_display(path: str, lin2name: dict[str, str], last_only=False) -> str:
     """Return label for node: '14 (Phyl II)' or just '14'."""
-    last_code = path.split(";")[-1]
+    display_pos = path
+    if last_only:
+        display_pos = path.split(";")[-1]
     if path in lin2name:
-        return f"{last_code} ({lin2name[path]})"
-    return last_code
+        return f"{lin2name[path]} ({display_pos})"
+    return display_pos
 
 def make_hover(src_path: str, tgt_path: str,
                frac: float, lin2name: dict[str, str]) -> str:
