@@ -22,6 +22,9 @@ def get_test_data(filename):
     thisdir = os.path.dirname(__file__)
     return os.path.join(thisdir, "test-data", filename)
 
+def get_example_data(filename):
+    thisdir = os.path.dirname(__file__)
+    return os.path.join(thisdir, "../examples", filename)
 
 def scriptpath(scriptname='sourmash'):
     """Return the path to the scripts, in both dev and install situations."""

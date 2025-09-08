@@ -22,7 +22,8 @@ from sourmash_plugin_betterplot import (load_labelinfo_csv,
                                         build_links_taxonomy,
                                         strip_prefix,
                                         path_to_display,
-                                        make_hover)
+                                        make_hover,
+                                        process_csv_for_sankey)
 
 
 def test_run_sourmash(runtmp):
@@ -197,3 +198,61 @@ def test_rows_to_edges_collapses_passthrough_2():
     assert len(edges) == 4  # 4 edges total
     # note: self edges are ignored for display
     # edges we have: [('a;b;c', 'a;b;c', 50.0), ('a;b;c', 'a;b;c;d', 20.0), ('a;b;c', 'a;b;c;e;f', 30.0), ('a;b;c;e;f', 'a;b;c;e;f', 30.0)]
+
+
+def test_process_csv_for_sankey_multiple_query_names_annotate(runtmp):
+    input_csv = utils.get_example_data('tax/test.gather.with-lineages.csv')
+    mult_query = runtmp.output('mult-query.csv')
+
+    # modify input to have multiple query_name values
+    with open(input_csv, newline="") as inF, open(mult_query, 'w', newline='') as outF:
+        # write directly to outF
+        for i, line in enumerate(inF):
+            if i == 0:
+                outF.write(line)
+            else:
+                if i % 2 == 0:
+                    line = line.replace("test1", "test2")
+                outF.write(line)
+
+    # now try to run process_csv_for_sankey, should fail
+    with pytest.raises(ValueError) as exc:
+        process_csv_for_sankey(mult_query, csv_type="with-lineages")
+    print(str(exc.value))
+    assert "Multiple query_name values detected:" in str(exc.value)
+    assert "test2" in str(exc.value)
+
+
+def test_process_csv_for_sankey_multiple_query_names_summarized(runtmp):
+    input_csv = utils.get_example_data('tax/test.tax-mg.summarized.csv')
+    mult_query = runtmp.output('mult-query.csv')
+
+    # modify input to have multiple query_name values
+    with open(input_csv, newline="") as inF, open(mult_query, 'w', newline='') as outF:
+        # write directly to outF
+        for i, line in enumerate(inF):
+            if i == 0:
+                outF.write(line)
+            else:
+                if i % 2 == 0:
+                    line = line.replace("test1", "test2")
+                outF.write(line)
+
+    # now try to run process_csv_for_sankey, should fail
+    with pytest.raises(ValueError) as exc:
+        process_csv_for_sankey(mult_query, csv_type="csv_summary")
+    print(str(exc.value))
+    assert "Multiple query_name values detected:" in str(exc.value)
+    assert "test2" in str(exc.value)
+
+def test_process_csv_for_sankey_annotate():
+    input_csv = utils.get_example_data('tax/test.gather.with-lineages.csv')
+
+    nodes, links, hover_texts = process_csv_for_sankey(input_csv, csv_type="with-lineages")
+    print(nodes)
+    assert nodes == ['d__Bacteria', 'p__Proteobacteria', 'c__Gammaproteobacteria', 'o__Enterobacterales', 'f__Enterobacteriaceae', 'g__Escherichia', 's__Escherichia coli', 'p__Bacteroidota', 'c__Bacteroidia', 'o__Bacteroidales', 'f__Bacteroidaceae', 'g__Prevotella', 's__Prevotella copri', 'g__Phocaeicola', 's__Phocaeicola vulgatus']
+    print(links)
+    assert links == [{'source': 0, 'target': 1, 'value': 5.815279361459521}, {'source': 1, 'target': 2, 'value': 5.815279361459521}, {'source': 2, 'target': 3, 'value': 5.815279361459521}, {'source': 3, 'target': 4, 'value': 5.815279361459521}, {'source': 4, 'target': 5, 'value': 5.815279361459521}, {'source': 5, 'target': 6, 'value': 5.815279361459521}, {'source': 0, 'target': 7, 'value': 5.04968235869034}, {'source': 7, 'target': 8, 'value': 5.04968235869034}, {'source': 8, 'target': 9, 'value': 5.04968235869034}, {'source': 9, 'target': 10, 'value': 5.04968235869034}, {'source': 10, 'target': 11, 'value': 5.04968235869034}, {'source': 11, 'target': 12, 'value': 5.04968235869034}, {'source': 0, 'target': 7, 'value': 1.5637726014008795}, {'source': 7, 'target': 8, 'value': 1.5637726014008795}, {'source': 8, 'target': 9, 'value': 1.5637726014008795}, {'source': 9, 'target': 10, 'value': 1.5637726014008795}, {'source': 10, 'target': 13, 'value': 1.5637726014008795}, {'source': 13, 'target': 14, 'value': 1.5637726014008795}, {'source': 0, 'target': 7, 'value': 0.6515719172503665}, {'source': 7, 'target': 8, 'value': 0.6515719172503665}, {'source': 8, 'target': 9, 'value': 0.6515719172503665}, {'source': 9, 'target': 10, 'value': 0.6515719172503665}, {'source': 10, 'target': 11, 'value': 0.6515719172503665}, {'source': 11, 'target': 12, 'value': 0.6515719172503665}]
+    print(hover_texts)
+    assert hover_texts == ['d__Bacteria → p__Proteobacteria<br>5.82%', 'p__Proteobacteria → c__Gammaproteobacteria<br>5.82%', 'c__Gammaproteobacteria → o__Enterobacterales<br>5.82%', 'o__Enterobacterales → f__Enterobacteriaceae<br>5.82%', 'f__Enterobacteriaceae → g__Escherichia<br>5.82%', 'g__Escherichia → s__Escherichia coli<br>5.82%', 'd__Bacteria → p__Bacteroidota<br>5.05%', 'p__Bacteroidota → c__Bacteroidia<br>5.05%', 'c__Bacteroidia → o__Bacteroidales<br>5.05%', 'o__Bacteroidales → f__Bacteroidaceae<br>5.05%', 'f__Bacteroidaceae → g__Prevotella<br>5.05%', 'g__Prevotella → s__Prevotella copri<br>5.05%', 'd__Bacteria → p__Bacteroidota<br>1.56%', 'p__Bacteroidota → c__Bacteroidia<br>1.56%', 'c__Bacteroidia → o__Bacteroidales<br>1.56%', 'o__Bacteroidales → f__Bacteroidaceae<br>1.56%', 'f__Bacteroidaceae → g__Phocaeicola<br>1.56%', 'g__Phocaeicola → s__Phocaeicola vulgatus<br>1.56%', 'd__Bacteria → p__Bacteroidota<br>0.65%', 'p__Bacteroidota → c__Bacteroidia<br>0.65%', 'c__Bacteroidia → o__Bacteroidales<br>0.65%', 'o__Bacteroidales → f__Bacteroidaceae<br>0.65%', 'f__Bacteroidaceae → g__Prevotella<br>0.65%', 'g__Prevotella → s__Prevotella copri<br>0.65%']
+

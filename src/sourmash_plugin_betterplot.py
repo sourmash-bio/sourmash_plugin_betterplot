@@ -2043,6 +2043,12 @@ def process_csv_for_sankey(input_csv, csv_type, lingroup_map=None):
     with open(input_csv, newline="") as inF:
         rows = list(csv.DictReader(inF))
         header = rows[0].keys() if rows else []
+        if "query_name" not in header:
+            raise ValueError(f"'query_name' column not found in {input_csv}. Is this a correct file for '{csv_type}' type?")
+        query_names = {row["query_name"].strip() for row in rows}
+        # if detect multiple query_names, fail
+        if len(query_names) > 1:
+            raise ValueError(f"Multiple query_name values detected: {query_names}. Sankey only works on a per-query basis; please provide a CSV with a single query_name.")
         notify(f"loaded {len(rows)} rows from '{input_csv}'")
 
     lins_mode = detect_lins(rows)
