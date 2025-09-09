@@ -1820,41 +1820,6 @@ def make_hover(src_path: str, tgt_path: str,
     return (f"{friendly(src_path)} → {friendly(tgt_path)}"
             f"<br>{frac:.2f}%")
 
-def print_expanded_summary(rows, fraction_col="f_unique_weighted", top_n=20):
-    """
-    Pretty-print expanded lineage rows, grouped by depth.
-    Also checks for duplicate lineages and total sum.
-    """
-    # Group by lineage
-    lineage_map = defaultdict(float)
-    for row in rows:
-        lineage_map[row["lineage"]] += float(row[fraction_col])
-
-    # Detect duplicates (lineages that appeared more than once)
-    duplicates = {lin: val for lin, val in lineage_map.items()
-                  if sum(1 for r in rows if r["lineage"] == lin) > 1}
-
-    # Print summary
-    print(f"Total unique lineages: {len(lineage_map)}")
-    print(f"Total raw rows: {len(rows)}")
-    if duplicates:
-        print(f"\n Found {len(duplicates)} duplicate lineages:")
-        for lin, val in list(duplicates.items())[:10]:
-            print(f"  {lin} → {val}")
-
-    # Compute global sum of root lineage(s)
-    roots = {lin: frac for lin, frac in lineage_map.items() if ";" not in lin}
-    print("\nRoot lineages and totals:")
-    for lin, frac in roots.items():
-        print(f"  {lin} → {frac:.6f}")
-
-    # Show a sample of expanded rows sorted by depth then lineage
-    print("\nSample expanded rows (first {} by depth):".format(top_n))
-    sorted_rows = sorted(lineage_map.items(), key=lambda kv: (len(kv[0].split(";")), kv[0]))
-    for lin, frac in sorted_rows[:top_n]:
-        depth = len(lin.split(";")) - 1
-        print(f"  {'  ' * depth}{lin} → {frac:.6f}")
-
 def is_lins_lineage(lineage: str) -> bool:
     """Return True if lineage looks like a LIN (all tokens are integers)."""
     parts = lineage.split(";")
@@ -1916,35 +1881,6 @@ def rows_to_edges(rows, fraction_key, lins=False, lin2name=None):
                 seen.add(edge)
 
     return edges
-
-def pretty_print_edges(edges, lin2name=None, lins=False):
-    """
-    Pretty print edges for debugging.
-    - If lin2name is given, include friendly names.
-    - If lins=True, show depth-coded nodes (p0:864 etc).
-    """
-    def friendly(path):
-        if not path:
-            return "<root>"
-        if lin2name and path in lin2name:
-            return f"{path} ({lin2name[path]})"
-        return path
-
-    print("Edges:")
-    for src, tgt, frac in edges:
-        if lins:
-            # keep the p0:/p1: prefixes visible
-            print(f"  {src} → {tgt}   ({frac:.2f}%)")
-        else:
-            print(f"  {friendly(src)} → {friendly(tgt)}   ({frac:.2f}%)")
-
-
-def print_rows(rows, fraction_key, title="Rows"):
-    print(f"\n--- {title} ({len(rows)} rows) ---")
-    for row in sorted(rows, key=lambda r: (r["lineage"].count(";"), r["lineage"])):
-        lineage = row["lineage"]
-        frac = float(row[fraction_key])
-        print(f"{lineage:<40}  {frac:.4f}")
 
 
 def build_links_taxonomy(rows, fraction_key, csv_type):
@@ -2090,14 +2026,11 @@ def process_csv_for_sankey(input_csv, csv_type, lingroup_map=None):
 
         # first, make sure we reconstruct all lineage paths from named lingroups
         rows = expand_with_ancestors_sum(rows, fraction_col)
-        print_rows(rows, fraction_col, title="Expanded Rows")
         notify(f"Expanded with ancestors: now {len(rows)} rows")
-        print_expanded_summary(rows, fraction_col=fraction_col, top_n=120)
         # note, this is set up to collapse paths that are single-child passthroughs,
         # might want to add an option to disable that.
         edges = rows_to_edges(rows, fraction_col, lins=True, lin2name=lin2name)
         nodes, links, hover_texts = edges_to_links(edges, lin2name=lin2name)
-        # pretty_print_edges(edges, lins=True)
 
     # not LINS? Just use the rows as is.
     else:
