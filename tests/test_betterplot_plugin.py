@@ -9,6 +9,7 @@ import sourmash
 import sourmash_tst_utils as utils
 from sourmash_tst_utils import SourmashCommandFailed
 from sourmash import sourmash_args
+from collections import defaultdict
 
 from sourmash_plugin_betterplot import (load_labelinfo_csv,
                                         load_categories_csv_for_labels,
@@ -323,8 +324,47 @@ def test_lins_annotate_vs_summary_equivalence_no_lingroup():
     # They should be the same (within tiny tolerance; values are percentages)
     assert _approx_equal_maps(pairs_a, pairs_b, tol=1e-9)
 
+def _is_unlabeled(label: str) -> bool:
+    # LINGROUP labels look like "name (lin)"; raw LINS have no '('
+    return "(" not in label
 
-def test_lins_annotate_vs_summary_equivalence_with_lingroup():
+def _assert_summary_subset_allow_unlabeled_bridge(summary_pairs, annotate_pairs, tol=1e-9):
+    # Build adjacency from annotate
+    children = defaultdict(set)
+    for (s, t) in annotate_pairs.keys():
+        children[s].add(t)
+
+    missing = []
+    mismatched = []
+
+    for (src, tgt), v in summary_pairs.items():
+        # direct match?
+        if (src, tgt) in annotate_pairs:
+            if not math.isclose(annotate_pairs[(src, tgt)], v, rel_tol=1e-9, abs_tol=tol):
+                mismatched.append(((src, tgt), annotate_pairs[(src, tgt)], v))
+            continue
+
+        # try a one-hop unlabeled bridge: src -> U (unlabeled) -> tgt
+        bridged_ok = False
+        for mid in children.get(src, ()):
+            if _is_unlabeled(mid) and (mid, tgt) in annotate_pairs:
+                if math.isclose(annotate_pairs[(mid, tgt)], v, rel_tol=1e-9, abs_tol=tol):
+                    bridged_ok = True
+                    break
+
+        if not bridged_ok:
+            missing.append((src, tgt))
+
+    msg = []
+    if missing:
+        msg.append(f"Missing {len(missing)} links (even with unlabeled bridge): {missing[:5]}...")
+    if mismatched:
+        msg.append("Value mismatches (annotate vs summary) e.g. " +
+                   "; ".join([f"{k}: {a} vs {b}" for k, a, b in mismatched[:5]]) + " ...")
+    assert not missing and not mismatched, "\n".join(msg)
+
+
+def test_lins_summary_with_lingroup_is_subset_of_annotate_with_lingroup():
     ann_csv = utils.get_test_data('SRR29654720_k31_gather.with-lineages.csv')
     lingroups_file = utils.get_test_data('ralstonia_lingroups.csv')
     sum_csv = utils.get_test_data('SRR29654720_k31_gather.summarized-lingroups.csv')
@@ -337,19 +377,34 @@ def test_lins_annotate_vs_summary_equivalence_with_lingroup():
     # Node labels should be raw integer paths (prefixes stripped), not pN:*
     assert not any(("p0:" in n or "p1:" in n) for n in nodes_a + nodes_b)
     # Pick a known named lingroup from the sample
-    leaf = "864;0;0;1;0;2;0;0;0;1;0"
+    leaf_lin = "864;0;0;1;0;2;0;0;0;1;0"
+    leaf_display = f"phylotype iv ({leaf_lin})"
     # It should appear as a node in both results
-    # assert leaf in nodes_a
-    # assert leaf in nodes_b
-    # # check leaf value
-    # leaf_idx_a = nodes_a.index(leaf)
-    # leaf_idx_b = nodes_b.index(leaf)
-    # leaf_value_a = sum(L["value"] for L in links_a if L["target"] == leaf_idx_a)
-    # leaf_value_b = sum(L["value"] for L in links_b if L["target"] == leaf_idx_b)
-    # print(f"leaf {leaf} values: annotate {leaf_value_a}, summary {leaf_value_b}")
-    # assert math.isclose(leaf_value_a, leaf_value_b, rel_tol=1e-9, abs_tol=1e-9)
+    assert leaf_display in nodes_a
+    assert leaf_display in nodes_b
+    # check leaf value
+    leaf_idx_a = nodes_a.index(leaf_display)
+    leaf_idx_b = nodes_b.index(leaf_display)
+    leaf_value_a = sum(L["value"] for L in links_a if L["target"] == leaf_idx_a)
+    leaf_value_b = sum(L["value"] for L in links_b if L["target"] == leaf_idx_b)
+    print(f"leaf {leaf_display} values: annotate {leaf_value_a}, summary {leaf_value_b}")
+    assert math.isclose(leaf_value_a, leaf_value_b, rel_tol=1e-9, abs_tol=1e-9)
+    # check higher-level node too
+    higher_lin = "864;0;0;1;0;0"
+    higher_display = f"Ralstonia solanacearum ({higher_lin})"
+    assert higher_display in nodes_a
+    assert higher_display in nodes_b
+    higher_idx_a = nodes_a.index(higher_display)
+    higher_idx_b = nodes_b.index(higher_display)
+    higher_value_a = sum(L["value"] for L in links_a if L["target"] == higher_idx_a)
+    higher_value_b = sum(L["value"] for L in links_b if L["target"] == higher_idx_b)
+    print(f"higher {higher_display} values: annotate {higher_value_a}, summary {higher_value_b}")
+    assert math.isclose(higher_value_a, higher_value_b, rel_tol=1e-9, abs_tol=1e-9)
+
     # # Compare the flows keyed by (src_label, tgt_label)
-    # pairs_a = _links_by_label(nodes_a, links_a)
-    # pairs_b = _links_by_label(nodes_b, links_b)
-    # # They should be the same (within tiny tolerance; values are percentages)
-    # assert _approx_equal_maps(pairs_a, pairs_b, tol=1e-9)
+    pairs_a = _links_by_label(nodes_a, links_a)
+    pairs_b = _links_by_label(nodes_b, links_b)
+    print("annotate pairs:", pairs_a)
+    print("summary pairs:", pairs_b)
+    # summary should be a subset of annotate (some paths may be missing. Allow unlabeled bridges)
+    _assert_summary_subset_allow_unlabeled_bridge(pairs_b, pairs_a, tol=1e-9)

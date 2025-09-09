@@ -2095,7 +2095,7 @@ def process_csv_for_sankey(input_csv, csv_type, lingroup_map=None):
         print_expanded_summary(rows, fraction_col=fraction_col, top_n=120)
         # note, this is set up to collapse paths that are single-child passthroughs,
         # might want to add an option to disable that.
-        edges = rows_to_edges(rows, fraction_col, lins=True)
+        edges = rows_to_edges(rows, fraction_col, lins=True, lin2name=lin2name)
         nodes, links, hover_texts = edges_to_links(edges, lin2name=lin2name)
         # pretty_print_edges(edges, lins=True)
 
