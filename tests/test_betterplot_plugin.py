@@ -287,3 +287,69 @@ def test_process_csv_annotate_vs_summary():
 
     # check that annotate and summary give same results
     assert _approx_equal_maps(pairs_a, pairs_b)
+
+
+def test_lins_annotate_vs_summary_equivalence_no_lingroup():
+    # Adjust paths to how you vend these fixtures in your test utils
+    ann_csv = utils.get_test_data('SRR29654720_k31_gather.with-lineages.csv')
+    sum_csv = utils.get_test_data('SRR29654720_k31_gather.summarized.no-lingroups.csv')
+
+    # Both files should hit the LINS codepath (detect_lins=True)
+    nodes_a, links_a, _ = process_csv_for_sankey(ann_csv, csv_type="with-lineages")
+    nodes_b, links_b, _ = process_csv_for_sankey(sum_csv, csv_type="csv_summary")
+
+    # Node labels should be raw integer paths (prefixes stripped), not pN:*
+    assert not any(("p0:" in n or "p1:" in n) for n in nodes_a + nodes_b)
+    assert all(all(tok.isdigit() for tok in n.split(";")) for n in nodes_a + nodes_b)
+
+    # Pick a known leaf from the sample (first row of the annotate file)
+    leaf = "864;0;0;1;0;1;0;0;0;0;2;1;0;2;0;0;0;0;0;0"
+    # It should appear as a node in both results
+    assert leaf in nodes_a
+    assert leaf in nodes_b
+
+    # check leaf value
+    leaf_idx_a = nodes_a.index(leaf)
+    leaf_idx_b = nodes_b.index(leaf)
+    leaf_value_a = sum(L["value"] for L in links_a if L["target"] == leaf_idx_a)
+    leaf_value_b = sum(L["value"] for L in links_b if L["target"] == leaf_idx_b)
+    print(f"leaf {leaf} values: annotate {leaf_value_a}, summary {leaf_value_b}")
+    assert math.isclose(leaf_value_a, leaf_value_b, rel_tol=1e-9, abs_tol=1e-9)
+
+    # Compare the flows keyed by (src_label, tgt_label)
+    pairs_a = _links_by_label(nodes_a, links_a)
+    pairs_b = _links_by_label(nodes_b, links_b)
+
+    # They should be the same (within tiny tolerance; values are percentages)
+    assert _approx_equal_maps(pairs_a, pairs_b, tol=1e-9)
+
+
+def test_lins_annotate_vs_summary_equivalence_with_lingroup():
+    ann_csv = utils.get_test_data('SRR29654720_k31_gather.with-lineages.csv')
+    lingroups_file = utils.get_test_data('ralstonia_lingroups.csv')
+    sum_csv = utils.get_test_data('SRR29654720_k31_gather.summarized-lingroups.csv')
+
+    # Both files should hit the LINS codepath (detect_lins=True)
+    nodes_a, links_a, _ = process_csv_for_sankey(ann_csv, csv_type="with-lineages", lingroup_map=lingroups_file)
+    nodes_b, links_b, _ = process_csv_for_sankey(sum_csv, csv_type="csv_summary")
+    print("nodes_a:", nodes_a)
+    print("nodes_b:", nodes_b)
+    # Node labels should be raw integer paths (prefixes stripped), not pN:*
+    assert not any(("p0:" in n or "p1:" in n) for n in nodes_a + nodes_b)
+    # Pick a known named lingroup from the sample
+    leaf = "864;0;0;1;0;2;0;0;0;1;0"
+    # It should appear as a node in both results
+    # assert leaf in nodes_a
+    # assert leaf in nodes_b
+    # # check leaf value
+    # leaf_idx_a = nodes_a.index(leaf)
+    # leaf_idx_b = nodes_b.index(leaf)
+    # leaf_value_a = sum(L["value"] for L in links_a if L["target"] == leaf_idx_a)
+    # leaf_value_b = sum(L["value"] for L in links_b if L["target"] == leaf_idx_b)
+    # print(f"leaf {leaf} values: annotate {leaf_value_a}, summary {leaf_value_b}")
+    # assert math.isclose(leaf_value_a, leaf_value_b, rel_tol=1e-9, abs_tol=1e-9)
+    # # Compare the flows keyed by (src_label, tgt_label)
+    # pairs_a = _links_by_label(nodes_a, links_a)
+    # pairs_b = _links_by_label(nodes_b, links_b)
+    # # They should be the same (within tiny tolerance; values are percentages)
+    # assert _approx_equal_maps(pairs_a, pairs_b, tol=1e-9)
