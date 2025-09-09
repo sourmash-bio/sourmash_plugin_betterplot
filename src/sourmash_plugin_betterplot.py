@@ -1948,34 +1948,51 @@ def print_rows(rows, fraction_key, title="Rows"):
 
 
 def build_links_taxonomy(rows, fraction_key, csv_type):
-    """Link builder for taxonomy CSVs with non-integer names."""
-    nodes, node_map, links, hover_texts = [], {}, [], []
-    processed_lineages = set()  # Track processed lineage pairs to avoid duplicates
-    for (n, row) in enumerate(rows):
-        fraction = float(row[fraction_key]) * 100 # Convert to percentage
-        lineage_parts = row["lineage"].split(";") # Taxonomic hierarchy
+    """
+    Build Sankey nodes/links/hover text for non-LIN taxonomies.
 
-        # Iterate through lineage levels and create source-target links
-        for i in range(len(lineage_parts) - 1):
-            source_label, target_label = lineage_parts[i].strip(), lineage_parts[i+1].strip()
+    Rules:
+      - with-lineages: sum fraction across rows for ALL adjacent pairs in each lineage.
+      - csv_summary: use ONLY the last link for each row (rank-specific), with f_weighted_at_rank.
+    """
+    nodes, node_map = [], {}
+    edge_values = defaultdict(float)  # (src, tgt) -> summed value
+    # optional: collect examples for hover; here we just show the final total
+    # but keep it simple and build hover from the final edge_values.
 
-            # Since 'tax metagenome' is already summarized, skip duplicates to prevent overcounting
-            if csv_type == "csv_summary" and (source_label, target_label) in processed_lineages:
-                continue
+    def add_node(label):
+        if label not in node_map:
+            node_map[label] = len(nodes)
+            nodes.append(label)
+        return node_map[label]
 
-            for label in (source_label, target_label):
-                if label not in node_map:
-                    node_map[label] = len(nodes)
-                    nodes.append(label)
-            links.append({
-                "source": node_map[source_label],
-                "target": node_map[target_label],
-                "value": fraction,
-            })
-            processed_lineages.add((source_label, target_label))  # Track added links
-            hover_texts.append(f"{source_label} → {target_label}<br>{fraction:.2f}%")
-    notify(f"Built {len(nodes)} nodes and {len(links)} links from {len(rows)} rows.")
-    return nodes, links, hover_texts
+    for row in rows:
+        parts = [p.strip() for p in row["lineage"].split(";") if p.strip()]
+        if len(parts) < 2:
+            continue
+        frac = float(row[fraction_key]) * 100.0  # store as percent
+
+        if csv_type == "csv_summary":
+            # Only the last part for the row's rank.
+            src, tgt = parts[-2], parts[-1]
+            # Usually one row per (src,tgt) at the right rank, but += is safe.
+            edge_values[(src, tgt)] += frac
+        else:
+            # with-lineages: contribute this fraction to *every* rank in the lineage
+            for i in range(len(parts) - 1):
+                src, tgt = parts[i], parts[i + 1]
+                edge_values[(src, tgt)] += frac
+
+    links, hovers = [], []
+    # Build nodes & links from the aggregated edge_values.
+    # Preserve insertion order from edge_values (dict preserves insertion since Py3.7).
+    for (src, tgt), val in edge_values.items():
+        s_idx = add_node(src)
+        t_idx = add_node(tgt)
+        links.append({"source": s_idx, "target": t_idx, "value": val})
+        hovers.append(f"{src} → {tgt}<br>{val:.2f}%")
+
+    return nodes, links, hovers
 
 def strip_prefix(path: str) -> str:
     """Remove p0:, p1:, ... prefixes from a lineage path (safe for non-LINs too)."""
