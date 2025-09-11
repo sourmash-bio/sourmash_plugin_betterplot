@@ -6,7 +6,7 @@ requires-python = ">=3.11"
 version = "0.5.5"
 
 # note: "legacy_cgi" is currently needed for ete3, but may need to be changed on next ete release, see: https://github.com/etetoolkit/ete/issues/780
-dependencies = ["sourmash>=4.9.2,<5", "sourmash_utils>=0.2",
+dependencies = ["sourmash>=4.9.4,<5", "sourmash_utils>=0.2",
                 "matplotlib", "numpy", "scipy", "scikit-learn",
                 "seaborn", "upsetplot", "matplotlib_venn", "pandas",
                 "plotly", "biopython", "ete3", "kaleido", "pyqt5",
