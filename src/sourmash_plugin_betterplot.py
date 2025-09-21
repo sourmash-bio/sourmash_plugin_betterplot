@@ -31,7 +31,6 @@ import plotly.graph_objects as go
 import squarify
 import taxburst
 
-
 # this turns off a warning in presence_filter, but results in an error in
 # upsetplot :sweat_smile:
 #pd.options.mode.copy_on_write = True
@@ -213,7 +212,6 @@ def sample_d_to_idents(sample_d):
 
     return xx
 
-
 def load_taxburst_json(filename, *, normalize_counts=True):
     """
     Load in JSON format output by taxburst.
@@ -227,7 +225,6 @@ def load_taxburst_json(filename, *, normalize_counts=True):
         taxburst.tree_utils.normalize_tree_counts(top_nodes)
 
     return top_nodes
-
 
 #
 # CLI plugin code
@@ -1783,8 +1780,7 @@ def save_sankey_diagram(fig, output_file):
                 notify("Unsupported file format. Use .html, .png, .jpg, .jpeg, .pdf, or .svg.")
         else:
             fig.show()  # Show the plot if no output file is specified
-
-
+    
 def process_csv_for_sankey(input_csv, csv_type):
     nodes = []  # List of unique taxonomy nodes
     node_map = {}  # Map taxonomic label to index
@@ -1805,8 +1801,6 @@ def process_csv_for_sankey(input_csv, csv_type):
     else:
         raise ValueError("Invalid csv_type. Use 'csv_summary' or 'with-lineages'.")
 
-    processed_lineages_d = defaultdict(float)
-
     # Process each row in the dataset
     for n, row in enumerate(data):
         fraction = float(row[fraction_key]) * 100  # Convert to percentage
@@ -1817,8 +1811,8 @@ def process_csv_for_sankey(input_csv, csv_type):
             source_label = lineage_parts[i].strip()
             target_label = lineage_parts[i + 1].strip()
 
-            # Since 'tax metagenome -F csv_summary' is already summarized, we must skip duplicate {source, target} to prevent overcounting
-            if csv_type == "csv_summary" and (source_label, target_label) in processed_lineages_d:
+            # Since 'tax metagenome' is already summarized, skip duplicates to prevent overcounting
+            if csv_type == "csv_summary" and (source_label, target_label) in processed_lineages:
                 continue
 
             # Assign indices to nodes
@@ -1830,18 +1824,14 @@ def process_csv_for_sankey(input_csv, csv_type):
                 node_map[target_label] = len(nodes)
                 nodes.append(target_label)
 
-            # for tax_annotate output, sum across source/target pairs.
-            processed_lineages_d[(source_label, target_label)] += fraction
-
-    # create links & annotations:
-    for ((source_label, target_label), fraction) in processed_lineages_d.items():
-        links.append({
-            "source": node_map[source_label],
-            "target": node_map[target_label],
-            "value": fraction
-        })
-        hover_texts.append(f"{source_label} → {target_label}<br>{fraction:.2f}%")
-
+            # Create a link between source and target
+            links.append({
+                "source": node_map[source_label],
+                "target": node_map[target_label],
+                "value": fraction
+            })
+            processed_lineages.add((source_label, target_label))  # Track added links
+            hover_texts.append(f"{source_label} → {target_label}<br>{fraction:.2f}%")
     notify(f"loaded {n+1} rows from '{input_csv}'")
 
     return nodes, links, hover_texts
@@ -1913,18 +1903,16 @@ Build a sankey plot to visualize taxonomic profiling. Uses sourmash 'gather' -->
         subparser.epilog = "You must provide either --summary-csv or --annotate-csv, but not both."
 
     def main(self, args):
+        # Build info appropriately based on input file type
         if args.summary_csv or args.annotate_csv:
-            # Build info appropriately based on input file type
             if args.summary_csv:
                 input_csv = args.summary_csv
                 csv_type = "csv_summary"
                 required_headers = ["f_weighted_at_rank", "lineage"]
-            elif args.annotate_csv:
+            else:
                 input_csv = args.annotate_csv
                 csv_type = "with-lineages"
                 required_headers = ["f_unique_weighted", "lineage"]
-            else:
-                assert 0, "unhandled input format"
 
             # Check if the required headers are present
             with open(input_csv, 'r') as file:
