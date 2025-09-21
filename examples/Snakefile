@@ -18,6 +18,7 @@ rule all:
         "3sketches.venn.png",
         "weighted_venn.png",
         "tax-mg.sankey.png",
+        "tax-annot.sankey.png",
         "taxburst.sankey.html",
         "disttree10sketches.matrix.png",
         "disttree10sketches.pairwise.png",
