@@ -1,4 +1,3 @@
-
 """betterplot plugin implementation"""
 
 epilog = """
@@ -33,7 +32,7 @@ import taxburst
 
 # this turns off a warning in presence_filter, but results in an error in
 # upsetplot :sweat_smile:
-#pd.options.mode.copy_on_write = True
+# pd.options.mode.copy_on_write = True
 
 from Bio import Phylo
 from Bio.Phylo.TreeConstruction import DistanceTreeConstructor, DistanceMatrix
@@ -43,11 +42,12 @@ from sourmash import sourmash_args
 from sourmash.logging import debug_literal, error, notify, print_results
 from sourmash.plugins import CommandLinePlugin
 import sourmash_utils
-from sourmash.cli.utils import (add_ksize_arg, add_moltype_args, add_scaled_arg)
+from sourmash.cli.utils import add_ksize_arg, add_moltype_args, add_scaled_arg
 from collections import Counter
 
 
 ### utility functions
+
 
 def load_labelinfo_csv(filename):
     "Load file output by 'sourmash compare --labels-to'"
@@ -57,8 +57,10 @@ def load_labelinfo_csv(filename):
     if len(labelinfo) == 0:
         raise Exception("ERROR: no labels found!?")
 
-    if not 'sort_order' in labelinfo[0]:
-        raise Exception("ERROR: this doesn't look like a 'labels' file produced by 'sourmash compare --labels-to'")
+    if not "sort_order" in labelinfo[0]:
+        raise Exception(
+            "ERROR: this doesn't look like a 'labels' file produced by 'sourmash compare --labels-to'"
+        )
 
     labelinfo.sort(key=lambda row: int(row["sort_order"]))
     return labelinfo
@@ -122,7 +124,9 @@ def load_categories_csv(filename, labelinfo):
                 colors.append(color)
 
             if missing_values:
-                raise ValueError(f"values {missing_values} are missing in categories file")
+                raise ValueError(
+                    f"values {missing_values} are missing in categories file"
+                )
 
         else:
             notify(f"no valid key column found in categories file '{filename}'.")
@@ -170,17 +174,17 @@ def load_categories_csv_for_labels(filename, samples_d):
     return category_to_color, colors
 
 
-def manysearch_rows_to_index(rows, *, column_name='query_name'):
+def manysearch_rows_to_index(rows, *, column_name="query_name"):
     """Extract # of samples and build name -> sample_index map from manysearch.
 
     Note, column names are "query_name", "match_name", or "both".
     """
-    if column_name in ('query_name', 'match_name'):
-        samples = set(( row[column_name] for row in rows ))
-    elif column_name == 'both':
+    if column_name in ("query_name", "match_name"):
+        samples = set((row[column_name] for row in rows))
+    elif column_name == "both":
         samples = set()
-        for col in ('query_name', 'match_name'):
-            samples.update(( row[col] for row in rows ))
+        for col in ("query_name", "match_name"):
+            samples.update((row[col] for row in rows))
     else:
         raise ValueError(f"unknown column_name '{column_name}'")
 
@@ -196,7 +200,7 @@ def labelinfo_to_idents(labelinfo):
     "Make x/yticklabels from a list of labelinfo rows"
     xx = []
     for row in labelinfo:
-        ident = row["label"].split(' ')
+        ident = row["label"].split(" ")
         ident = ident[0]
         xx.append(ident)
 
@@ -207,11 +211,12 @@ def sample_d_to_idents(sample_d):
     "Make x/yticklabels from a list of (k, v) from sample_d.items()."
     xx = []
     for k, v in sample_d:
-        ident = k.split(' ')
+        ident = k.split(" ")
         ident = ident[0]
         xx.append(ident)
 
     return xx
+
 
 def load_taxburst_json(filename, *, normalize_counts=True):
     """
@@ -219,7 +224,7 @@ def load_taxburst_json(filename, *, normalize_counts=True):
 
     Optionally normalize counts to fractions that sum to 1.
     """
-    with open(filename, 'rt') as fp:
+    with open(filename, "rt") as fp:
         top_nodes = json.load(fp)
 
     if normalize_counts:
@@ -231,6 +236,7 @@ def load_taxburst_json(filename, *, normalize_counts=True):
 #
 # CLI plugin code
 #
+
 
 class Command_Plot2(CommandLinePlugin):
     command = "plot2"  # 'scripts <command>'
@@ -353,7 +359,7 @@ def plot_composite_matrix(
 
     labeltext = [row["label"] for row in labelinfo]
 
-    truncate_name = lambda x: x[:30-3] + '...' if len(x) >= 30 else x
+    truncate_name = lambda x: x[: 30 - 3] + "..." if len(x) >= 30 else x
     labeltext = [truncate_name(label) for label in labeltext]
 
     Z1 = sch.dendrogram(
@@ -482,8 +488,9 @@ def plot2(args):
 
 
 def plot_mds(matrix, *, colors=None, category_map=None, metric=True):
-    mds = MDS(n_components=2, dissimilarity="precomputed", random_state=42,
-              metric=metric)
+    mds = MDS(
+        n_components=2, dissimilarity="precomputed", random_state=42, metric=metric
+    )
     mds_coords = mds.fit_transform(matrix)
     plt.scatter(mds_coords[:, 0], mds_coords[:, 1], color=colors)
     plt.xlabel("Dimension 1")
@@ -517,12 +524,19 @@ class Command_MDS(CommandLinePlugin):
             "-C", "--categories-csv", help="CSV mapping label columns to categories"
         )
         subparser.add_argument("-o", "--output-figure", required=True)
-        subparser.add_argument("--metric", dest="metric", default=True,
-                               action="store_true",
-                               help="compute MDS (metric) - the default")
-        subparser.add_argument("--nmds", dest="metric",
-                               action="store_false",
-                               help="compute NMDS (non-metric)")
+        subparser.add_argument(
+            "--metric",
+            dest="metric",
+            default=True,
+            action="store_true",
+            help="compute MDS (metric) - the default",
+        )
+        subparser.add_argument(
+            "--nmds",
+            dest="metric",
+            action="store_false",
+            help="compute NMDS (non-metric)",
+        )
 
     def main(self, args):
         super().main(args)
@@ -544,8 +558,7 @@ class Command_MDS(CommandLinePlugin):
             category_map, colors = load_categories_csv(args.categories_csv, labelinfo)
 
         dissim = 1 - mat
-        plot_mds(dissim, colors=colors, category_map=category_map,
-                 metric=args.metric)
+        plot_mds(dissim, colors=colors, category_map=category_map, metric=args.metric)
 
         notify(f"writing figure to '{args.output_figure}'")
         plt.savefig(args.output_figure)
@@ -634,12 +647,19 @@ class Command_MDS2(CommandLinePlugin):
             "-C", "--categories-csv", help="CSV mapping label columns to categories"
         )
         subparser.add_argument("-o", "--output-figure", required=True)
-        subparser.add_argument("--metric", dest="metric", default=True,
-                               action="store_true",
-                               help="compute MDS (metric) - the default")
-        subparser.add_argument("--nmds", dest="metric",
-                               action="store_false",
-                               help="compute NMDS (non-metric)")
+        subparser.add_argument(
+            "--metric",
+            dest="metric",
+            default=True,
+            action="store_true",
+            help="compute MDS (metric) - the default",
+        )
+        subparser.add_argument(
+            "--nmds",
+            dest="metric",
+            action="store_false",
+            help="compute NMDS (non-metric)",
+        )
 
     def main(self, args):
         super().main(args)
@@ -654,7 +674,7 @@ class Command_MDS2(CommandLinePlugin):
 
         # pick out all the distinct queries/matches.
         notify(f"loaded {len(rows)} rows from '{args.pairwise_csv}'")
-        sample_d = manysearch_rows_to_index(rows, column_name='both')
+        sample_d = manysearch_rows_to_index(rows, column_name="both")
         notify(f"loaded {len(sample_d)} total elements")
 
         mat = numpy.zeros((len(sample_d), len(sample_d)))
@@ -681,8 +701,7 @@ class Command_MDS2(CommandLinePlugin):
             )
 
         dissim = 1 - mat
-        plot_mds(dissim, colors=colors, category_map=category_map,
-                 metric=args.metric)
+        plot_mds(dissim, colors=colors, category_map=category_map, metric=args.metric)
 
         notify(f"writing figure to '{args.output_figure}'")
         plt.savefig(args.output_figure)
@@ -755,8 +774,7 @@ class Command_Plot3(CommandLinePlugin):
             "-C", "--categories-csv", help="CSV mapping label columns to categories"
         )
         subparser.add_argument(
-            "--no-labels", action="store_true",
-            help="disable X & Y axis labels"
+            "--no-labels", action="store_true", help="disable X & Y axis labels"
         )
 
     def main(self, args):
@@ -799,9 +817,9 @@ class Command_Plot3(CommandLinePlugin):
         dissim = D
 
         if args.no_labels:
-            yticklabels=[]
+            yticklabels = []
         else:
-            yticklabels=labelinfo_to_idents(labelinfo)
+            yticklabels = labelinfo_to_idents(labelinfo)
 
         # plot!
         fig = sns.clustermap(
@@ -879,16 +897,13 @@ class Command_Clustermap1(CommandLinePlugin):
             "--boolean", action="store_true", help="convert values into 0/1"
         )
         subparser.add_argument(
-            "--no-labels", action="store_true",
-            help="disable X & Y axis labels"
+            "--no-labels", action="store_true", help="disable X & Y axis labels"
         )
         subparser.add_argument(
-            "--no-x-labels", action="store_true",
-            help="disable X axis labels"
+            "--no-x-labels", action="store_true", help="disable X axis labels"
         )
         subparser.add_argument(
-            "--no-y-labels", action="store_true",
-            help="disable Y axis labels"
+            "--no-y-labels", action="store_true", help="disable Y axis labels"
         )
 
     def main(self, args):
@@ -899,8 +914,8 @@ class Command_Clustermap1(CommandLinePlugin):
         # pick out all the distinct queries/matches.
         notify(f"loaded {len(rows)} rows from '{args.manysearch_csv}'")
 
-        query_d = manysearch_rows_to_index(rows, column_name='query_name')
-        against_d = manysearch_rows_to_index(rows, column_name='match_name')
+        query_d = manysearch_rows_to_index(rows, column_name="query_name")
+        against_d = manysearch_rows_to_index(rows, column_name="match_name")
 
         notify(f"loaded {len(query_d)} x {len(against_d)} total elements")
 
@@ -913,7 +928,9 @@ class Command_Clustermap1(CommandLinePlugin):
         notify(f"using column '{colname}'")
         make_bool = args.boolean
         if make_bool:
-            notify(f"forcing values to 0 / 1 and disabling color bar because of --boolean")
+            notify(
+                f"forcing values to 0 / 1 and disabling color bar because of --boolean"
+            )
 
         for row in rows:
             q = row["query_name"]
@@ -942,11 +959,11 @@ class Command_Clustermap1(CommandLinePlugin):
             )
 
         kw_args = {}
-        if args.boolean:        # turn off colorbar if boolean.
-            kw_args['cbar_pos'] = None
+        if args.boolean:  # turn off colorbar if boolean.
+            kw_args["cbar_pos"] = None
 
-        yticklabels=sample_d_to_idents(query_d_items)
-        xticklabels=sample_d_to_idents(against_d_items)
+        yticklabels = sample_d_to_idents(query_d_items)
+        xticklabels = sample_d_to_idents(against_d_items)
         if args.no_labels:
             xticklabels = []
             yticklabels = []
@@ -967,7 +984,7 @@ class Command_Clustermap1(CommandLinePlugin):
             xticklabels=xticklabels,
             yticklabels=yticklabels,
             cmap="flare",
-            **kw_args
+            **kw_args,
         )
 
         if col_colors and col_category_map:
@@ -994,37 +1011,59 @@ class Command_Clustermap1(CommandLinePlugin):
 
 class Command_Upset(CommandLinePlugin):
     command = "upset"  # 'scripts <command>'
-    description = "visualize intersections of sketches using upsetplot"  # output with -h
+    description = (
+        "visualize intersections of sketches using upsetplot"  # output with -h
+    )
     usage = "sourmash scripts upset <sketches> [<sketches> ...] -o <output>.png"  # output with no args/bad args as well as -h
     epilog = epilog  # output with -h
     formatter_class = argparse.RawTextHelpFormatter  # do not reformat multiline
 
     def __init__(self, p):
         super().__init__(p)
-        p.add_argument('sketches', nargs='+')
-        p.add_argument('--show-singletons', action='store_true',
-                       help='show membership of single sketches as well')
-        p.add_argument('-o', '--output-figure', required=True)
-        p.add_argument('--truncate-labels-at', default=30, type=int,
-                       help="limit labels to this length (default: 30)")
+        p.add_argument("sketches", nargs="+")
+        p.add_argument(
+            "--show-singletons",
+            action="store_true",
+            help="show membership of single sketches as well",
+        )
+        p.add_argument("-o", "--output-figure", required=True)
+        p.add_argument(
+            "--truncate-labels-at",
+            default=30,
+            type=int,
+            help="limit labels to this length (default: 30)",
+        )
         sourmash_utils.add_standard_minhash_args(p)
-        p.add_argument('--sort-by', default='cardinality',
-                       choices=['cardinality', 'degree', '-cardinality', '-degree'],
-                       help='sort display by size of intersection, or number of categories intersected')
-        p.add_argument('--min-subset-size', default="0%",
-                       type=str,
-                       help="omit sets below this size or percentage (default: '0%%')")
-        p.add_argument('--show-percentages', action="store_true",
-                       help='show percentages on plot')
-        p.add_argument('--save-intersections-to-file', default=None,
-                       help='save intersections to a file, to avoid expensive recalculations')
-        p.add_argument('--load-intersections-from-file', default=None,
-                       help='load precalculated intersections from a file')
+        p.add_argument(
+            "--sort-by",
+            default="cardinality",
+            choices=["cardinality", "degree", "-cardinality", "-degree"],
+            help="sort display by size of intersection, or number of categories intersected",
+        )
+        p.add_argument(
+            "--min-subset-size",
+            default="0%",
+            type=str,
+            help="omit sets below this size or percentage (default: '0%%')",
+        )
+        p.add_argument(
+            "--show-percentages", action="store_true", help="show percentages on plot"
+        )
+        p.add_argument(
+            "--save-intersections-to-file",
+            default=None,
+            help="save intersections to a file, to avoid expensive recalculations",
+        )
+        p.add_argument(
+            "--load-intersections-from-file",
+            default=None,
+            help="load precalculated intersections from a file",
+        )
 
-#        p.add_argument('--save-names-to-file', default=None,
-#                       help='save set names to a file, for editing & customization')
-#        p.add_argument('--load-names-from-file', default=None,
-#                       help='load set names from a file to customize plots')
+    #        p.add_argument('--save-names-to-file', default=None,
+    #                       help='save set names to a file, for editing & customization')
+    #        p.add_argument('--load-names-from-file', default=None,
+    #                       help='load set names from a file to customize plots')
 
     def main(self, args):
         super().main(args)
@@ -1033,7 +1072,9 @@ class Command_Upset(CommandLinePlugin):
         def powerset(iterable, *, start=2):
             "powerset([1,2,3]) → () (1,) (2,) (3,) (1,2) (1,3) (2,3) (1,2,3)"
             s = list(iterable)
-            return chain.from_iterable(combinations(s, r) for r in range(start, len(s)+1))
+            return chain.from_iterable(
+                combinations(s, r) for r in range(start, len(s) + 1)
+            )
 
         select_mh = sourmash_utils.create_minhash_from_args(args)
         print(f"selecting sketches: {select_mh}")
@@ -1053,7 +1094,7 @@ class Command_Upset(CommandLinePlugin):
 
         notify(f"Loaded {len(siglist)} signatures & downsampled to scaled={scaled}")
 
-        names_check = [ ss.name for ss in siglist ]
+        names_check = [ss.name for ss in siglist]
         if len(set(names_check)) != len(names_check):
             notify("ERROR: duplicate names or sketches; please fix!!")
             cnt = Counter(names_check)
@@ -1076,15 +1117,19 @@ class Command_Upset(CommandLinePlugin):
             notify(f"Showing individual sketch membership b/c of --show-singletons")
             start = 1
         else:
-            notify(f"Omitting individual sketch membership; use --show-singletons to see.")
+            notify(
+                f"Omitting individual sketch membership; use --show-singletons to see."
+            )
 
         pset = list(powerset(siglist, start=start))
         pset.sort(key=lambda x: -len(x))
-        #get_name = lambda x: [ ss.name.split(' ')[0] for ss in x ]
+        # get_name = lambda x: [ ss.name.split(' ')[0] for ss in x ]
         truncate_at = args.truncate_labels_at
-        truncate_name = lambda x: x[:truncate_at-3] + '...' if len(x) >= truncate_at else x
-        get_name = lambda x: [ truncate_name(ss.name) for ss in x ]
-        names = [ get_name(combo) for combo in pset ]
+        truncate_name = lambda x: (
+            x[: truncate_at - 3] + "..." if len(x) >= truncate_at else x
+        )
+        get_name = lambda x: [truncate_name(ss.name) for ss in x]
+        names = [get_name(combo) for combo in pset]
 
         notify(f"powerset of distinct combinations: {len(pset)}")
 
@@ -1092,7 +1137,7 @@ class Command_Upset(CommandLinePlugin):
 
         if args.load_intersections_from_file:
             notify(f"loading intersections from '{args.load_intersections_from_file}'")
-            with open(args.load_intersections_from_file, 'rb') as fp:
+            with open(args.load_intersections_from_file, "rb") as fp:
                 check_names, nonzero_names, counts = pickle.load(fp)
 
             # confirm!
@@ -1120,38 +1165,40 @@ class Command_Upset(CommandLinePlugin):
                     counts.append(len(hashes) * scaled)
                     nonzero_names.append(names[n])
                     subtract_me.update(hashes)
-            notify(f"\n...done! {len(nonzero_names)} non-empty intersections of {len(names)} total.")
+            notify(
+                f"\n...done! {len(nonzero_names)} non-empty intersections of {len(names)} total."
+            )
 
             # maybe decrease memory, but also prevent re/mis-use of these :)
             del subtract_me
             del hashes
-#            del names
+            #            del names
 
             if args.save_intersections_to_file:
                 notify(f"saving intersections to '{args.save_intersections_to_file}'")
-                with open(args.save_intersections_to_file, 'wb') as fp:
+                with open(args.save_intersections_to_file, "wb") as fp:
                     pickle.dump((names, nonzero_names, counts), fp)
 
-#        if args.save_names_to_file:
-#            with open(args.save_names_to_file, 'w', newline='') as fp:
-#                w = csv.writer(fp)
-#                w.writerow(['sort_order', 'name'])
-#                for n, name in enumerate(names):
-#                    w.writerow([n, name])
-#            notify(f"saved {len(names)} names to '{args.save_names_to_file}'")
+        #        if args.save_names_to_file:
+        #            with open(args.save_names_to_file, 'w', newline='') as fp:
+        #                w = csv.writer(fp)
+        #                w.writerow(['sort_order', 'name'])
+        #                for n, name in enumerate(names):
+        #                    w.writerow([n, name])
+        #            notify(f"saved {len(names)} names to '{args.save_names_to_file}'")
 
-#        if args.load_names_from_file:
-#            with open(args.load_names_from_file, 'r', newline='') as fp:
-#                r = csv.DictReader(fp)
-#                rows = list(r)
-#                if 'sort_order' not in rows[0].keys():
-#                    error("'sort_order' must be a column in names file '{args.load_names_from_file}'")
-#                if 'name' not in rows[0].keys():
-#                    error("'name' must be a column in names file '{args.load_names_from_file}'")
-#
-#                rows.sort(key=lambda x: int(x["sort_order"]))
-#                names = [ row["name"] for row in rows ]
-#            notify("loaded {len(names)} names from '{args.load_names_from_file}'")
+        #        if args.load_names_from_file:
+        #            with open(args.load_names_from_file, 'r', newline='') as fp:
+        #                r = csv.DictReader(fp)
+        #                rows = list(r)
+        #                if 'sort_order' not in rows[0].keys():
+        #                    error("'sort_order' must be a column in names file '{args.load_names_from_file}'")
+        #                if 'name' not in rows[0].keys():
+        #                    error("'name' must be a column in names file '{args.load_names_from_file}'")
+        #
+        #                rows.sort(key=lambda x: int(x["sort_order"]))
+        #                names = [ row["name"] for row in rows ]
+        #            notify("loaded {len(names)} names from '{args.load_names_from_file}'")
 
         ## now! calculate actual data for upsetplot...
 
@@ -1165,14 +1212,17 @@ class Command_Upset(CommandLinePlugin):
             notify(f"setting min_subset_size='{min_subset_size}' (percentage)")
 
         print(data)
-        upsetplot.plot(data, sort_by=args.sort_by,
-                       min_subset_size=min_subset_size,
-                       show_percentages=args.show_percentages)
+        upsetplot.plot(
+            data,
+            sort_by=args.sort_by,
+            min_subset_size=min_subset_size,
+            show_percentages=args.show_percentages,
+        )
 
         notify(f"saving upsetr figure to '{args.output_figure}'")
         plt.savefig(args.output_figure, bbox_inches="tight")
         # @CTB use 'notify'
-        
+
 
 def plot_tsne(matrix, *, colors=None, category_map=None):
     perplexity = min(len(matrix) - 1, 50)
@@ -1260,7 +1310,7 @@ class Command_TSNE2(CommandLinePlugin):
 
         # pick out all the distinct queries/matches.
         notify(f"loaded {len(rows)} rows from '{args.pairwise_csv}'")
-        sample_d = manysearch_rows_to_index(rows, column_name='both')
+        sample_d = manysearch_rows_to_index(rows, column_name="both")
         notify(f"loaded {len(sample_d)} total elements")
 
         mat = numpy.zeros((len(sample_d), len(sample_d)))
@@ -1315,48 +1365,50 @@ class Command_ClusterToCategories(CommandLinePlugin):
 
     def __init__(self, p):
         super().__init__(p)
-        p.add_argument('manysearch_csv')
-        p.add_argument('cluster_csv')
-        p.add_argument('-o', '--output-categories-csv', required=True)
+        p.add_argument("manysearch_csv")
+        p.add_argument("cluster_csv")
+        p.add_argument("-o", "--output-categories-csv", required=True)
 
     def main(self, args):
         super().main(args)
 
         # load samples
-        with open(args.manysearch_csv, newline='') as fp:
+        with open(args.manysearch_csv, newline="") as fp:
             r = csv.DictReader(fp)
             rows = list(r)
 
-        samples_d = manysearch_rows_to_index(rows, column_name='both')
+        samples_d = manysearch_rows_to_index(rows, column_name="both")
         notify(f"loaded {len(samples_d)} samples from '{args.manysearch_csv}'")
 
         ident_d = {}
         for name, sample_idx in samples_d.items():
-            ident = name.split(' ')[0]
+            ident = name.split(" ")[0]
             ident_d[ident] = name
 
-        with open(args.cluster_csv, newline='') as fp:
+        with open(args.cluster_csv, newline="") as fp:
             r = csv.DictReader(fp)
             rows = list(r)
 
         cluster_to_idents = defaultdict(set)
         n_samples_clustered = 0
         for row in rows:
-            cluster = row['cluster']
-            nodes = row['nodes'].split(';')
+            cluster = row["cluster"]
+            nodes = row["nodes"].split(";")
             if len(nodes) == 1:
-                cluster = 'unclustered'
+                cluster = "unclustered"
             cluster_to_idents[cluster].update(nodes)
             n_samples_clustered += len(nodes)
 
-        notify(f"loaded {len(cluster_to_idents)} clusters containing {n_samples_clustered} members total")
+        notify(
+            f"loaded {len(cluster_to_idents)} clusters containing {n_samples_clustered} members total"
+        )
         notify(f"{len(cluster_to_idents['unclustered'])} singletons => 'unclustered'")
 
         notfound = set(ident_d)
 
-        with open(args.output_categories_csv, 'w', newline='') as fp:
+        with open(args.output_categories_csv, "w", newline="") as fp:
             w = csv.writer(fp)
-            w.writerow(['label', 'category'])
+            w.writerow(["label", "category"])
             for cluster_name, idents in cluster_to_idents.items():
                 for ident in idents:
                     name = ident_d[ident]
@@ -1367,7 +1419,7 @@ class Command_ClusterToCategories(CommandLinePlugin):
                 notify(f"{len(notfound)} unmentioned samples => 'unclustered'")
                 for ident in notfound:
                     name = ident_d[ident]
-                    w.writerow([name, 'unclustered'])
+                    w.writerow([name, "unclustered"])
 
 
 def set_size(x):
@@ -1376,6 +1428,7 @@ def set_size(x):
 
 def _venn2_sizes(a, b):
     return (set_size(a - b), set_size(b - a), set_size(a & b))
+
 
 def _venn3_sizes(a, b, c):
     return (
@@ -1389,6 +1442,7 @@ def _venn3_sizes(a, b, c):
         set_size((b & c) - a),
         set_size(a & b & c),
     )
+
 
 def set_venn_label(v, loc, label):
     x = v.get_label_by_id(loc)
@@ -1411,7 +1465,7 @@ def format_bp(bp):
 
 
 class Command_Venn(CommandLinePlugin):
-    command = 'venn'
+    command = "venn"
     description = """\
 create and write out a pairwise or three-way Venn set overlap diagram.
 
@@ -1428,20 +1482,32 @@ Abundances are ignored.
     def __init__(self, subparser):
         super().__init__(subparser)
         # add argparse arguments here.
-        debug_literal('RUNNING cmd venn __init__')
-        subparser.add_argument('sketches', nargs='+',
-                               help="file(s) containing two or three sketches")
-        subparser.add_argument('-o', '--output', default=None,
-                               help="save Venn diagram image to this file",
-                               required=True)
-        subparser.add_argument('--name1', default=None,
-                               help="override name for first sketch")
-        subparser.add_argument('--name2', default=None,
-                               help="override name for second sketch")
-        subparser.add_argument('--name3', default=None,
-                               help="override name for (optional) third sketch")
-        subparser.add_argument('--ident', action='store_true', dest='ident',
-                               help="use first space-separated identifier for sequence name")
+        debug_literal("RUNNING cmd venn __init__")
+        subparser.add_argument(
+            "sketches", nargs="+", help="file(s) containing two or three sketches"
+        )
+        subparser.add_argument(
+            "-o",
+            "--output",
+            default=None,
+            help="save Venn diagram image to this file",
+            required=True,
+        )
+        subparser.add_argument(
+            "--name1", default=None, help="override name for first sketch"
+        )
+        subparser.add_argument(
+            "--name2", default=None, help="override name for second sketch"
+        )
+        subparser.add_argument(
+            "--name3", default=None, help="override name for (optional) third sketch"
+        )
+        subparser.add_argument(
+            "--ident",
+            action="store_true",
+            dest="ident",
+            help="use first space-separated identifier for sequence name",
+        )
         add_ksize_arg(subparser, default=31)
         add_moltype_args(subparser)
         add_scaled_arg(subparser)
@@ -1451,7 +1517,7 @@ Abundances are ignored.
         super().main(args)
         moltype = sourmash_args.calculate_moltype(args)
 
-        debug_literal(f'RUNNING cmd {self} {args}')
+        debug_literal(f"RUNNING cmd {self} {args}")
 
         sketch_files = list(args.sketches)
 
@@ -1459,11 +1525,15 @@ Abundances are ignored.
         for filename in sketch_files:
             print_moltype = moltype
             if print_moltype is None:
-                print_moltype = '*'
-            notify(f"Loading sketches from {filename} with k={args.ksize} moltype={print_moltype}")
-            x = list(sourmash.load_file_as_signatures(filename,
-                                                      ksize=args.ksize,
-                                                      select_moltype=moltype))
+                print_moltype = "*"
+            notify(
+                f"Loading sketches from {filename} with k={args.ksize} moltype={print_moltype}"
+            )
+            x = list(
+                sourmash.load_file_as_signatures(
+                    filename, ksize=args.ksize, select_moltype=moltype
+                )
+            )
             notify(f"...loaded {len(x)} sketches from {filename}.")
             sketches.extend(x)
 
@@ -1485,7 +1555,7 @@ Abundances are ignored.
 
         mh1 = mh1.downsample(scaled=scaled)
         mh2 = sketches[1].minhash.downsample(scaled=scaled)
-        mh1.jaccard(mh2)        # test for general compatibility :)
+        mh1.jaccard(mh2)  # test for general compatibility :)
 
         hashes1 = set(mh1.hashes)
         hashes2 = set(mh2.hashes)
@@ -1494,29 +1564,29 @@ Abundances are ignored.
         if not label1:
             label1 = sketches[0].name
             if args.ident:
-                label1 = sketches[0].name.split(' ')[0]
+                label1 = sketches[0].name.split(" ")[0]
 
         label2 = args.name2
         if not label2:
             label2 = sketches[1].name
             if args.ident:
-                label2 = sketches[1].name.split(' ')[0]
+                label2 = sketches[1].name.split(" ")[0]
 
         if len(sketches) == 2:
             notify("found two sketches - outputting a 2-part Venn diagram.")
             if mh1.track_abundance or mh2.track_abundance:
                 notify("NOTE: abundances detected, but not used; try weighted_venn")
             sizes = _venn2_sizes(hashes1, hashes2)
-            sizes = [ size * mh1.scaled for size in sizes ]
+            sizes = [size * mh1.scaled for size in sizes]
             v = venn2(sizes, set_labels=(label1, label2))
-            set_venn_label(v, '10', format_bp(sizes[0]))
-            set_venn_label(v, '01', format_bp(sizes[1]))
-            set_venn_label(v, '11', format_bp(sizes[2]))
+            set_venn_label(v, "10", format_bp(sizes[0]))
+            set_venn_label(v, "01", format_bp(sizes[1]))
+            set_venn_label(v, "11", format_bp(sizes[2]))
 
         elif len(sketches) == 3:
             notify("found three sketches - outputting a 3-part Venn diagram.")
             mh3 = sketches[2].minhash.downsample(scaled=scaled)
-            mh1.jaccard(mh3)    # again, test for compatibility
+            mh1.jaccard(mh3)  # again, test for compatibility
 
             if mh1.track_abundance or mh2.track_abundance or mh3.track_abundance:
                 notify("NOTE: abundances detected, but not used; try weighted_venn")
@@ -1526,25 +1596,25 @@ Abundances are ignored.
             if not label3:
                 label3 = sketches[2].name
                 if args.ident:
-                    label3 = sketches[2].name.split(' ')[0]
+                    label3 = sketches[2].name.split(" ")[0]
 
             sizes = _venn3_sizes(hashes1, hashes2, hashes3)
-            sizes = [ size * mh1.scaled for size in sizes ]
+            sizes = [size * mh1.scaled for size in sizes]
             v = venn3(sizes, set_labels=(label1, label2, label3))
-            set_venn_label(v, '100', format_bp(sizes[0]))
-            set_venn_label(v, '010', format_bp(sizes[1]))
-            set_venn_label(v, '110', format_bp(sizes[2]))
-            set_venn_label(v, '001', format_bp(sizes[3]))
-            set_venn_label(v, '101', format_bp(sizes[4]))
-            set_venn_label(v, '011', format_bp(sizes[5]))
-            set_venn_label(v, '111', format_bp(sizes[6]))
+            set_venn_label(v, "100", format_bp(sizes[0]))
+            set_venn_label(v, "010", format_bp(sizes[1]))
+            set_venn_label(v, "110", format_bp(sizes[2]))
+            set_venn_label(v, "001", format_bp(sizes[3]))
+            set_venn_label(v, "101", format_bp(sizes[4]))
+            set_venn_label(v, "011", format_bp(sizes[5]))
+            set_venn_label(v, "111", format_bp(sizes[6]))
 
         notify(f"saving to '{args.output}'")
         pylab.savefig(args.output)
 
 
 class Command_WeightedVenn(CommandLinePlugin):
-    command = 'weighted_venn'
+    command = "weighted_venn"
     description = """\
 create and write out a pairwise Venn diagram, weighted by the abundance of
 the first sketch.
@@ -1559,19 +1629,30 @@ the first sketch.
     def __init__(self, subparser):
         super().__init__(subparser)
         # add argparse arguments here.
-        debug_literal('RUNNING cmd weighted_venn __init__')
-        subparser.add_argument('sketches', nargs='+',
-                               help="file(s) containing two sketches")
-        subparser.add_argument('-o', '--output', default=None,
-                               help="save Venn diagram image to this file",
-                               required=True)
-        subparser.add_argument('--name1', default=None,
-                               help="override name for first sketch")
-        subparser.add_argument('--name2', default=None,
-                               help="override name for second sketch")
+        debug_literal("RUNNING cmd weighted_venn __init__")
+        subparser.add_argument(
+            "sketches", nargs="+", help="file(s) containing two sketches"
+        )
+        subparser.add_argument(
+            "-o",
+            "--output",
+            default=None,
+            help="save Venn diagram image to this file",
+            required=True,
+        )
+        subparser.add_argument(
+            "--name1", default=None, help="override name for first sketch"
+        )
+        subparser.add_argument(
+            "--name2", default=None, help="override name for second sketch"
+        )
 
-        subparser.add_argument('--ident', action='store_true', dest='ident',
-                               help="use first space-separated identifier for sequence name")
+        subparser.add_argument(
+            "--ident",
+            action="store_true",
+            dest="ident",
+            help="use first space-separated identifier for sequence name",
+        )
         add_ksize_arg(subparser, default=31)
         add_moltype_args(subparser)
         add_scaled_arg(subparser)
@@ -1581,7 +1662,7 @@ the first sketch.
         super().main(args)
         moltype = sourmash_args.calculate_moltype(args)
 
-        debug_literal(f'RUNNING cmd {self} {args}')
+        debug_literal(f"RUNNING cmd {self} {args}")
 
         sketch_files = list(args.sketches)
 
@@ -1589,11 +1670,15 @@ the first sketch.
         for filename in sketch_files:
             print_moltype = moltype
             if print_moltype is None:
-                print_moltype = '*'
-            notify(f"Loading sketches from {filename} with k={args.ksize} moltype={print_moltype}")
-            x = list(sourmash.load_file_as_signatures(filename,
-                                                      ksize=args.ksize,
-                                                      select_moltype=moltype))
+                print_moltype = "*"
+            notify(
+                f"Loading sketches from {filename} with k={args.ksize} moltype={print_moltype}"
+            )
+            x = list(
+                sourmash.load_file_as_signatures(
+                    filename, ksize=args.ksize, select_moltype=moltype
+                )
+            )
             notify(f"...loaded {len(x)} sketches from {filename}.")
             sketches.extend(x)
 
@@ -1609,19 +1694,19 @@ the first sketch.
 
         mh1 = mh1.downsample(scaled=scaled)
         mh2 = sketches[1].minhash.downsample(scaled=scaled)
-        mh1.jaccard(mh2)        # test for general compatibility :)
+        mh1.jaccard(mh2)  # test for general compatibility :)
 
         label1 = args.name1
         if not label1:
             label1 = sketches[0].name
             if args.ident:
-                label1 = sketches[0].name.split(' ')[0]
+                label1 = sketches[0].name.split(" ")[0]
 
         label2 = args.name2
         if not label2:
             label2 = sketches[1].name
             if args.ident:
-                label2 = sketches[1].name.split(' ')[0]
+                label2 = sketches[1].name.split(" ")[0]
 
         notify("found two sketches - outputting a 2-part Venn diagram.")
         notify("Venn diagram will be weighted by abundances in first sketch.")
@@ -1631,7 +1716,7 @@ the first sketch.
         if mh2.track_abundance:
             notify("WARNING: abundances on second sketch will be ignored.")
 
-        abunds = mh1.hashes     # dictionary w/abunds
+        abunds = mh1.hashes  # dictionary w/abunds
         mh2_hashes = set(mh2.hashes)
         a_sub_b = 0
         b_sub_a = 0
@@ -1648,20 +1733,20 @@ the first sketch.
         for h in set(abunds) - mh2_hashes:
             a_sub_b += abunds[h]
 
-        sizes = [ a_sub_b, b_sub_a, isect_count ]
-        sizes = [ size * mh1.scaled for size in sizes ]
+        sizes = [a_sub_b, b_sub_a, isect_count]
+        sizes = [size * mh1.scaled for size in sizes]
 
         v = venn2(sizes, set_labels=(label1, label2))
-        set_venn_label(v, '10', format_bp(sizes[0]))
-        set_venn_label(v, '01', format_bp(sizes[1]))
-        set_venn_label(v, '11', format_bp(sizes[2]))
+        set_venn_label(v, "10", format_bp(sizes[0]))
+        set_venn_label(v, "01", format_bp(sizes[1]))
+        set_venn_label(v, "11", format_bp(sizes[2]))
 
         notify(f"saving to '{args.output}'")
         pylab.savefig(args.output)
 
 
 class Command_PresenceFilter(CommandLinePlugin):
-    command = 'presence_filter'
+    command = "presence_filter"
     description = """\
 Provide a filtered view of 'gather' output, plotting detection or ANI
 against average abund for significant matches.
@@ -1676,111 +1761,130 @@ against average abund for significant matches.
     def __init__(self, subparser):
         super().__init__(subparser)
         # add argparse arguments here.
-        subparser.add_argument('gather_csv')
-        subparser.add_argument('-o', '--output', default=None,
-                               help="save image to this file",
-                               required=True)
-        subparser.add_argument('-N', '--min-num-hashes', type=int,
-                               default=3, help='threshold (default: 3)')
-        subparser.add_argument('--min-ani', type=float, default=0.0,
-                               help='ANI threshold (default: None)')
-        subparser.add_argument('--min-fraction', type=float, default=0.0,
-                               help='detection threshold (default: None)')
-        subparser.add_argument('--detection', action="store_true",
-                               default=True)
-        subparser.add_argument('--detection-column-name',
-                               default='f_match_orig')
-        subparser.add_argument('--ani', dest='detection',
-                               action="store_false")
-        subparser.add_argument('--green-color',
-                               help="color genomes with matching names green")
-        subparser.add_argument('--red-color',
-                               help="color genomes with matching names red")
-        subparser.add_argument('--blue-color',
-                               help="color genomes with matching names blue")
+        subparser.add_argument("gather_csv")
+        subparser.add_argument(
+            "-o",
+            "--output",
+            default=None,
+            help="save image to this file",
+            required=True,
+        )
+        subparser.add_argument(
+            "-N", "--min-num-hashes", type=int, default=3, help="threshold (default: 3)"
+        )
+        subparser.add_argument(
+            "--min-ani", type=float, default=0.0, help="ANI threshold (default: None)"
+        )
+        subparser.add_argument(
+            "--min-fraction",
+            type=float,
+            default=0.0,
+            help="detection threshold (default: None)",
+        )
+        subparser.add_argument("--detection", action="store_true", default=True)
+        subparser.add_argument("--detection-column-name", default="f_match_orig")
+        subparser.add_argument("--ani", dest="detection", action="store_false")
+        subparser.add_argument(
+            "--green-color", help="color genomes with matching names green"
+        )
+        subparser.add_argument(
+            "--red-color", help="color genomes with matching names red"
+        )
+        subparser.add_argument(
+            "--blue-color", help="color genomes with matching names blue"
+        )
 
     def main(self, args):
         df = pd.read_csv(args.gather_csv)
         notify(f"loaded {len(df)} rows from '{args.gather_csv}'")
 
-        scaled = set(df['scaled'])
+        scaled = set(df["scaled"])
         assert len(scaled) == 1
         scaled = list(scaled)[0]
 
-        if 'name' in df.columns:
-            df['match_name'] = df['name'] # correct for gather/fastgather column names
+        if "name" in df.columns:
+            df["match_name"] = df["name"]  # correct for gather/fastgather column names
 
         notify(f"loaded {len(df)} rows.")
         if args.min_num_hashes:
             threshold = args.min_num_hashes * scaled
-            df = df[df['unique_intersect_bp'] >= threshold]
-            notify(f"filtered down to {len(df)} rows with unique_intersect_bp >= {threshold}")
+            df = df[df["unique_intersect_bp"] >= threshold]
+            notify(
+                f"filtered down to {len(df)} rows with unique_intersect_bp >= {threshold}"
+            )
 
         if args.min_ani:
-            df = df[df['match_containment_ani'] >= args.min_ani]
-            notify(f"filtered down to {len(df)} rows with match_containment_ani >= {args.min_ani} (--min-ani)")
+            df = df[df["match_containment_ani"] >= args.min_ani]
+            notify(
+                f"filtered down to {len(df)} rows with match_containment_ani >= {args.min_ani} (--min-ani)"
+            )
 
         if args.min_fraction:
             df = df[df[args.detection_column_name] >= args.min_fraction]
-            notify(f"filtered down to {len(df)} rows with {args.detection_column_name} >= {args.min_fraction} (--min-fraction)")
+            notify(
+                f"filtered down to {len(df)} rows with {args.detection_column_name} >= {args.min_fraction} (--min-fraction)"
+            )
 
         if args.detection:
-            plt.plot(df[args.detection_column_name], df.average_abund, 'k.')
+            plt.plot(df[args.detection_column_name], df.average_abund, "k.")
         else:
-            plt.plot(df.match_containment_ani, df.average_abund, 'k.')
+            plt.plot(df.match_containment_ani, df.average_abund, "k.")
 
         dfs = []
         colors = []
         if args.green_color:
-            df2 = df[df['match_name'].str.contains(args.green_color)]
+            df2 = df[df["match_name"].str.contains(args.green_color)]
             notify(f"{len(df2)} matches to {args.green_color} => green circles")
             dfs.append(df2)
-            colors.append('go')
+            colors.append("go")
         if args.red_color:
-            df2 = df[df['match_name'].str.contains(args.red_color)]
+            df2 = df[df["match_name"].str.contains(args.red_color)]
             notify(f"{len(df2)} matches to {args.red_color} => red crosses")
 
             dfs.append(df2)
-            colors.append('r+')
+            colors.append("r+")
         if args.blue_color:
-            df2 = df[df['match_name'].str.contains(args.blue_color)]
+            df2 = df[df["match_name"].str.contains(args.blue_color)]
             notify(f"{len(df2)} matches to {args.blue_color} => blue triangles")
             dfs.append(df2)
-            colors.append('bv')
+            colors.append("bv")
 
-        for (df2, color) in zip(dfs, colors):
+        for df2, color in zip(dfs, colors):
             if args.detection:
                 plt.plot(df2.f_match_orig, df2.average_abund, color)
-            else:               # ANI!
+            else:  # ANI!
                 plt.plot(df2.match_containment_ani, df2.average_abund, color)
 
         ax = plt.gca()
-        ax.set_yscale('log')
+        ax.set_yscale("log")
 
         if args.detection:
-            ax.set_xlabel('fraction of genome detected')
+            ax.set_xlabel("fraction of genome detected")
             ax.set_xlim((0, 1))
         else:
-            ax.set_xlabel('cANI of match')
+            ax.set_xlabel("cANI of match")
 
-        ax.set_ylabel('log abundance (copy number)')
+        ax.set_ylabel("log abundance (copy number)")
 
         notify(f"saving figure to '{args.output}'")
         plt.tight_layout()
         plt.savefig(args.output)
 
+
 def save_sankey_diagram(fig, output_file):
-        if output_file:
-            if output_file.endswith(".html"):
-                fig.write_html(output_file)
-                notify(f"Saved interactive HTML: {output_file}")
-            elif output_file.endswith((".png", ".jpg", ".jpeg", ".pdf", ".svg")):
-                fig.write_image(output_file)
-                notify(f"Saved image file: {output_file}")
-            else:
-                notify("Unsupported file format. Use .html, .png, .jpg, .jpeg, .pdf, or .svg.")
+    if output_file:
+        if output_file.endswith(".html"):
+            fig.write_html(output_file)
+            notify(f"Saved interactive HTML: {output_file}")
+        elif output_file.endswith((".png", ".jpg", ".jpeg", ".pdf", ".svg")):
+            fig.write_image(output_file)
+            notify(f"Saved image file: {output_file}")
         else:
-            fig.show()  # Show the plot if no output file is specified
+            notify(
+                "Unsupported file format. Use .html, .png, .jpg, .jpeg, .pdf, or .svg."
+            )
+    else:
+        fig.show()  # Show the plot if no output file is specified
 
 
 def load_lingroups(map_csv):
@@ -1795,8 +1899,7 @@ def load_lingroups(map_csv):
 
 def expand_with_ancestors_sum(rows, fraction_col):
     """Expand rows with all ancestor paths, summing children if ancestor missing."""
-    lineage_fracs = {row["lineage"].strip(): float(row[fraction_col])
-                     for row in rows}
+    lineage_fracs = {row["lineage"].strip(): float(row[fraction_col]) for row in rows}
 
     # collect all paths (lineages + their ancestors)
     all_paths = set()
@@ -1817,10 +1920,13 @@ def expand_with_ancestors_sum(rows, fraction_col):
     # process paths from deepest to shallowest
     for p in sorted(all_paths, key=lambda x: len(x.split(";")), reverse=True):
         if p not in lineage_sums:
-            lineage_sums[p] = sum(lineage_sums[c] for c in children[p] if c in lineage_sums)
+            lineage_sums[p] = sum(
+                lineage_sums[c] for c in children[p] if c in lineage_sums
+            )
 
     # return as rows
     return [{"lineage": lin, fraction_col: frac} for lin, frac in lineage_sums.items()]
+
 
 def path_to_display(path: str, lin2name: dict[str, str], last_only=False) -> str:
     """Return label for node: '14 (Phyl II)' or just '14'."""
@@ -1831,18 +1937,23 @@ def path_to_display(path: str, lin2name: dict[str, str], last_only=False) -> str
         return f"{lin2name[path]} ({display_pos})"
     return display_pos
 
-def make_hover(src_path: str, tgt_path: str,
-               frac: float, lin2name: dict[str, str]) -> str:
+
+def make_hover(
+    src_path: str, tgt_path: str, frac: float, lin2name: dict[str, str]
+) -> str:
     """Full path + friendly names in hover tooltip."""
+
     def friendly(p):
         return f"{p} ({lin2name[p]})" if p in lin2name else p
-    return (f"{friendly(src_path)} → {friendly(tgt_path)}"
-            f"<br>{frac:.2f}%")
+
+    return f"{friendly(src_path)} → {friendly(tgt_path)}" f"<br>{frac:.2f}%"
+
 
 def is_lins_lineage(lineage: str) -> bool:
     """Return True if lineage looks like a LIN (all tokens are integers)."""
     parts = lineage.split(";")
     return all(p.strip().isdigit() for p in parts if p.strip())
+
 
 def detect_lins(rows):
     # Peek at the first 20 rows (or all if fewer)
@@ -1852,6 +1963,7 @@ def detect_lins(rows):
         for r in sample
         if "lineage" in r and r["lineage"] != "unclassified"
     )
+
 
 def rows_to_edges(rows, fraction_key, lins=False, lin2name=None):
     """
@@ -1891,8 +2003,12 @@ def rows_to_edges(rows, fraction_key, lins=False, lin2name=None):
             eff_child = collapse_path(path)
 
             if lins:
-                eff_parent = ";".join(f"p{i}:{tok}" for i, tok in enumerate(eff_parent.split(";")))
-                eff_child  = ";".join(f"p{i}:{tok}" for i, tok in enumerate(eff_child.split(";")))
+                eff_parent = ";".join(
+                    f"p{i}:{tok}" for i, tok in enumerate(eff_parent.split(";"))
+                )
+                eff_child = ";".join(
+                    f"p{i}:{tok}" for i, tok in enumerate(eff_child.split(";"))
+                )
 
             edge = (eff_parent, eff_child, frac)
             if edge not in seen:
@@ -1949,11 +2065,13 @@ def build_links_taxonomy(rows, fraction_key, csv_type):
 
     return nodes, links, hovers
 
+
 def strip_prefix(path: str) -> str:
     """Remove p0:, p1:, ... prefixes from a lineage path (safe for non-LINs too)."""
     if not path:
         return path
     return ";".join(seg.split(":", 1)[-1] for seg in path.split(";"))
+
 
 def edges_to_links(edges, lin2name=None):
     """
@@ -1965,10 +2083,10 @@ def edges_to_links(edges, lin2name=None):
     """
     lin2name = lin2name or {}
 
-    node_map = {}     # internal_id -> index
-    labels = []       # display labels aligned with node indices
-    links = []        # dicts with source/target/value
-    hovers = []       # hover strings aligned with links
+    node_map = {}  # internal_id -> index
+    labels = []  # display labels aligned with node indices
+    links = []  # dicts with source/target/value
+    hovers = []  # hover strings aligned with links
 
     for src_id, tgt_id, frac in edges:
         # guard: skip true self-loops (same internal node)
@@ -1988,11 +2106,13 @@ def edges_to_links(edges, lin2name=None):
                 node_map[nid] = len(labels)
                 labels.append(lbl)
 
-        links.append({
-            "source": node_map[src_id],
-            "target": node_map[tgt_id],
-            "value": float(frac),   # already in %
-        })
+        links.append(
+            {
+                "source": node_map[src_id],
+                "target": node_map[tgt_id],
+                "value": float(frac),  # already in %
+            }
+        )
         hovers.append(make_hover(src_raw, tgt_raw, float(frac), lin2name))
 
     return labels, links, hovers
@@ -2016,11 +2136,15 @@ def process_csv_for_sankey(input_csv, csv_type, lingroup_map=None):
         rows = list(csv.DictReader(inF))
         header = rows[0].keys() if rows else []
         if "query_name" not in header:
-            raise ValueError(f"'query_name' column not found in {input_csv}. Is this a correct file for '{csv_type}' type?")
+            raise ValueError(
+                f"'query_name' column not found in {input_csv}. Is this a correct file for '{csv_type}' type?"
+            )
         query_names = {row["query_name"].strip() for row in rows}
         # if detect multiple query_names, fail
         if len(query_names) > 1:
-            raise ValueError(f"Multiple query_name values detected: {query_names}. Sankey only works on a per-query basis; please provide a CSV with a single query_name.")
+            raise ValueError(
+                f"Multiple query_name values detected: {query_names}. Sankey only works on a per-query basis; please provide a CSV with a single query_name."
+            )
         notify(f"loaded {len(rows)} rows from '{input_csv}'")
 
     lins_mode = detect_lins(rows)
@@ -2035,11 +2159,15 @@ def process_csv_for_sankey(input_csv, csv_type, lingroup_map=None):
                     if "lingroup" in row and row["lingroup"].strip():
                         lin2name[row["lineage"]] = row.get("lingroup", "").strip()
             elif lin2name:
-                notify(f"No 'lingroup' column in csv_summary, using lingroup map from '{lingroup_map}'.")
+                notify(
+                    f"No 'lingroup' column in csv_summary, using lingroup map from '{lingroup_map}'."
+                )
             else:
                 notify("No lingroup map provided; using raw 'LIN' lineages.")
         elif lin2name:
-            notify(f"Using lingroup map from '{lingroup_map}' with {len(lin2name)} entries.")
+            notify(
+                f"Using lingroup map from '{lingroup_map}' with {len(lin2name)} entries."
+            )
         else:
             notify("No lingroup map provided; using raw 'LIN' lineages.")
 
@@ -2087,11 +2215,13 @@ def process_taxburst_for_sankey(input_file):
                 nodes.append(target_label)
 
             # Create a link between source and target
-            links.append({
-                "source": node_map[source_label],
-                "target": node_map[target_label],
-                "value": percent
-            })
+            links.append(
+                {
+                    "source": node_map[source_label],
+                    "target": node_map[target_label],
+                    "value": percent,
+                }
+            )
             hover_texts.append(f"{source_label} → {target_label}<br>{percent:.2f}%")
     notify(f"loaded {n+1} nodes from '{input_file}'")
 
@@ -2099,7 +2229,7 @@ def process_taxburst_for_sankey(input_file):
 
 
 class Command_Sankey(CommandLinePlugin):
-    command = 'sankey'
+    command = "sankey"
     description = """\
 Build a sankey plot to visualize taxonomic profiling. Uses sourmash 'gather' --> 'tax' output ('tax metagenome' csv_summary format or 'tax annotate' output).
 """
@@ -2114,15 +2244,33 @@ Build a sankey plot to visualize taxonomic profiling. Uses sourmash 'gather' -->
         super().__init__(subparser)
         # add argparse arguments here.
         group = subparser.add_mutually_exclusive_group(required=True)
-        group.add_argument("--summary-csv", type=str, help="Path to csv_summary generated by running 'sourmash tax metagenome' on a sourmash gather csv")
-        group.add_argument("--annotate-csv", type=str, help="Path to 'with-lineages' file generated by running 'sourmash tax annotate' on a sourmash gather csv")
-        group.add_argument('--taxburst-json', type=str, help="taxburst JSON output")
-        subparser.add_argument("--lingroups", type=str, help="Path to 'lingroups' file (lineage to lingroup mapping) to enable lingroup labeling in the Sankey diagram. Not needed if `csv_summary` was generated with `--lingroups` file provided.")
-        
-        subparser.add_argument("-o", "--output", type=str, help="output file for alluvial flow diagram")
-        subparser.add_argument("--title", type=str, help="Plot title (default: use input filename)")
+        group.add_argument(
+            "--summary-csv",
+            type=str,
+            help="Path to csv_summary generated by running 'sourmash tax metagenome' on a sourmash gather csv",
+        )
+        group.add_argument(
+            "--annotate-csv",
+            type=str,
+            help="Path to 'with-lineages' file generated by running 'sourmash tax annotate' on a sourmash gather csv",
+        )
+        group.add_argument("--taxburst-json", type=str, help="taxburst JSON output")
+        subparser.add_argument(
+            "--lingroups",
+            type=str,
+            help="Path to 'lingroups' file (lineage to lingroup mapping) to enable lingroup labeling in the Sankey diagram. Not needed if `csv_summary` was generated with `--lingroups` file provided.",
+        )
 
-        subparser.epilog = "You must provide either --summary-csv or --annotate-csv, but not both."
+        subparser.add_argument(
+            "-o", "--output", type=str, help="output file for alluvial flow diagram"
+        )
+        subparser.add_argument(
+            "--title", type=str, help="Plot title (default: use input filename)"
+        )
+
+        subparser.epilog = (
+            "You must provide either --summary-csv or --annotate-csv, but not both."
+        )
 
     def main(self, args):
         if args.summary_csv or args.annotate_csv:
@@ -2137,13 +2285,17 @@ Build a sankey plot to visualize taxonomic profiling. Uses sourmash 'gather' -->
                 required_headers = ["f_unique_weighted", "lineage"]
 
             # Check if the required headers are present
-            with open(input_csv, 'r') as file:
+            with open(input_csv, "r") as file:
                 reader = csv.DictReader(file)
                 if not all(header in reader.fieldnames for header in required_headers):
-                    raise ValueError(f"Expected headers {required_headers} not found. Is this a correct file for '{csv_type}' type?")
+                    raise ValueError(
+                        f"Expected headers {required_headers} not found. Is this a correct file for '{csv_type}' type?"
+                    )
 
             # process csv
-            nodes, links, hover_texts = process_csv_for_sankey(input_csv, csv_type, lingroup_map=args.lingroups)
+            nodes, links, hover_texts = process_csv_for_sankey(
+                input_csv, csv_type, lingroup_map=args.lingroups
+            )
             base_title = os.path.basename(input_csv.rsplit(".csv")[0])
         elif args.taxburst_json:
             nodes, links, hover_texts = process_taxburst_for_sankey(args.taxburst_json)
@@ -2152,31 +2304,30 @@ Build a sankey plot to visualize taxonomic profiling. Uses sourmash 'gather' -->
             assert 0, "unhandled input format"
 
         # Create Sankey diagram
-        fig = go.Figure(go.Sankey(
-            node=dict(
-                pad=15,
-                thickness=20,
-                label=nodes
-            ),
-            link=dict(
-                source=[link["source"] for link in links],
-                target=[link["target"] for link in links],
-                value=[link["value"] for link in links],
-                customdata=hover_texts,
-                hovertemplate="%{customdata}<extra></extra>"  # Use custom hover text
+        fig = go.Figure(
+            go.Sankey(
+                node=dict(pad=15, thickness=20, label=nodes),
+                link=dict(
+                    source=[link["source"] for link in links],
+                    target=[link["target"] for link in links],
+                    value=[link["value"] for link in links],
+                    customdata=hover_texts,
+                    hovertemplate="%{customdata}<extra></extra>",  # Use custom hover text
+                ),
             )
-        ))
+        )
 
         if args.title:
             title = args.title
         else:
-            title = base_title 
-        fig.update_layout(title_text=f"{title}",
-                        font_size=10,
-                        autosize=False,
-                        width=1500,  # Increase width
-                        height=900   # Increase height
-                        )
+            title = base_title
+        fig.update_layout(
+            title_text=f"{title}",
+            font_size=10,
+            autosize=False,
+            width=1500,  # Increase width
+            height=900,  # Increase height
+        )
 
         # Save output based on file extension
         save_sankey_diagram(fig, args.output)
@@ -2203,18 +2354,21 @@ def read_compare_matrix(input_matrix, labels_from, matrix_type="similarity"):
     labels = [row["label"] for row in labelinfo]
 
     # replace commas with '_' because commas are treated differently for plotting
-    labels = [x.replace(',', '_') for x in labels]
+    labels = [x.replace(",", "_") for x in labels]
 
     return matrix, labels
 
-def pairwise_to_matrix(input_csv, use_column='jaccard'):
+
+def pairwise_to_matrix(input_csv, use_column="jaccard"):
     """Convert pairwise CSV to a distance matrix."""
-    with open(input_csv, 'r') as file:
-        reader = csv.DictReader(file, quotechar='"', delimiter=',')
+    with open(input_csv, "r") as file:
+        reader = csv.DictReader(file, quotechar='"', delimiter=",")
         rows = list(reader)
 
-    sample_names = sorted(set(row['query_name'].strip() for row in rows) |
-                          set(row['match_name'].strip() for row in rows))
+    sample_names = sorted(
+        set(row["query_name"].strip() for row in rows)
+        | set(row["match_name"].strip() for row in rows)
+    )
     sample_d = {name: idx for idx, name in enumerate(sample_names)}
     notify(f"...found {len(sample_d.keys())} (total {len(rows)} pairwise comparisons).")
 
@@ -2223,7 +2377,7 @@ def pairwise_to_matrix(input_csv, use_column='jaccard'):
     numpy.fill_diagonal(matrix, 0.0)
 
     for row in rows:
-        q, m = row['query_name'], row['match_name']
+        q, m = row["query_name"], row["match_name"]
         qi, mi = sample_d[q], sample_d[m]
         value = numpy.float64(row[use_column])
         distance = numpy.float64(1 - value)  # Convert similarity to distance
@@ -2231,7 +2385,9 @@ def pairwise_to_matrix(input_csv, use_column='jaccard'):
         matrix[qi, mi] = distance
         matrix[mi, qi] = distance
 
-    labels = [x.replace(',', '_') for x in sample_d.keys()]  # Replace commas for safe plotting
+    labels = [
+        x.replace(",", "_") for x in sample_d.keys()
+    ]  # Replace commas for safe plotting
     return matrix, labels
 
 
@@ -2266,12 +2422,16 @@ def plot_tree_ete(tree, layout, output_image=None, show=False):
     try:
         from ete3 import Tree, TreeStyle
     except ImportError:
-        print("** WARNING: could not import TreeStyle; maybe PyQT5 is not installed?",
-              file=sys.stderr)
-        print("** Will not be able to output trees. About to fail in 1... 2... 3...",
-               file=sys.stderr)
+        print(
+            "** WARNING: could not import TreeStyle; maybe PyQT5 is not installed?",
+            file=sys.stderr,
+        )
+        print(
+            "** Will not be able to output trees. About to fail in 1... 2... 3...",
+            file=sys.stderr,
+        )
 
-    ete_tree = Tree(tree.format('newick'), format=1)
+    ete_tree = Tree(tree.format("newick"), format=1)
     ts = TreeStyle()
     ts.show_leaf_name = True
     if layout == "circular":
@@ -2288,8 +2448,9 @@ def plot_tree_ete(tree, layout, output_image=None, show=False):
     if show:
         ete_tree.show(tree_style=ts)
 
+
 class Command_DistTree(CommandLinePlugin):
-    command = 'tree'
+    command = "tree"
     description = """\
 Build a neighbor-joining tree from 'sourmash compare' or 'sourmash scripts pairwise' output.
 """
@@ -2304,17 +2465,55 @@ Build a neighbor-joining tree from 'sourmash compare' or 'sourmash scripts pairw
         super().__init__(subparser)
         # add argparse arguments here.
         group = subparser.add_mutually_exclusive_group(required=True)
-        group.add_argument("--compare-matrix", type=str, help="Path to the distance matrix (numpy .npy file)")
-        group.add_argument("--pairwise-csv", type=str, help="Path to a pairwise CSV file")
+        group.add_argument(
+            "--compare-matrix",
+            type=str,
+            help="Path to the distance matrix (numpy .npy file)",
+        )
+        group.add_argument(
+            "--pairwise-csv", type=str, help="Path to a pairwise CSV file"
+        )
         subparser.add_argument(
             "--labels-from", help="output from 'sourmash compare --labels-to'"
         )
-        subparser.add_argument("--matrix-type", type=str, choices=["similarity", "distance"], default="similarity", help="Are matrix values 'similarity' (e.g. jaccard, containment) or 'distance' (1-jaccard, 1-containment, etc)? default: 'similarity' (also default output for sourmash compare).")
-        subparser.add_argument("--use-column", type=str, default="jaccard", choices=["jaccard", "max_containment"], help="column name to use in pairwise CSV (default: jaccard)",)
-        subparser.add_argument("--newick", type=str, help="Output tree in  Newick format. File must end in '.nwk'")
-        subparser.add_argument("-o", "--output", type=str, help="Output file for tree image (.png, .jpg, .jpeg, .svg, .pdf)")
-        subparser.add_argument("--show", action="store_true", default=False, help="Open tree image in ETE3 browser window (default=False)")
-        subparser.add_argument("--tree-layout", type=str, choices=["rectangular", "circular"], default="rectangular", help="Tree layout (rectangular or circular)")
+        subparser.add_argument(
+            "--matrix-type",
+            type=str,
+            choices=["similarity", "distance"],
+            default="similarity",
+            help="Are matrix values 'similarity' (e.g. jaccard, containment) or 'distance' (1-jaccard, 1-containment, etc)? default: 'similarity' (also default output for sourmash compare).",
+        )
+        subparser.add_argument(
+            "--use-column",
+            type=str,
+            default="jaccard",
+            choices=["jaccard", "max_containment"],
+            help="column name to use in pairwise CSV (default: jaccard)",
+        )
+        subparser.add_argument(
+            "--newick",
+            type=str,
+            help="Output tree in  Newick format. File must end in '.nwk'",
+        )
+        subparser.add_argument(
+            "-o",
+            "--output",
+            type=str,
+            help="Output file for tree image (.png, .jpg, .jpeg, .svg, .pdf)",
+        )
+        subparser.add_argument(
+            "--show",
+            action="store_true",
+            default=False,
+            help="Open tree image in ETE3 browser window (default=False)",
+        )
+        subparser.add_argument(
+            "--tree-layout",
+            type=str,
+            choices=["rectangular", "circular"],
+            default="rectangular",
+            help="Tree layout (rectangular or circular)",
+        )
 
         subparser.epilog = "You must provide either --compare-matrix and --labels-from or --pairwise-csv, but not both."
 
@@ -2323,7 +2522,9 @@ Build a neighbor-joining tree from 'sourmash compare' or 'sourmash scripts pairw
             if not args.labels_from:
                 notify("Must provide --labels-from when using --compare-matrix")
                 sys.exit(-1)
-            matrix, labels = read_compare_matrix(args.compare_matrix, args.labels_from, args.matrix_type)
+            matrix, labels = read_compare_matrix(
+                args.compare_matrix, args.labels_from, args.matrix_type
+            )
         elif args.pairwise_csv:
             matrix, labels = pairwise_to_matrix(args.pairwise_csv, args.use_column)
 
@@ -2331,13 +2532,15 @@ Build a neighbor-joining tree from 'sourmash compare' or 'sourmash scripts pairw
         if args.newick:
             save_tree(tree, args.newick)
         if not args.show:
-            os.environ['QT_QPA_PLATFORM']='offscreen'
+            os.environ["QT_QPA_PLATFORM"] = "offscreen"
         if args.show or args.output:
-            plot_tree_ete(tree, args.tree_layout, output_image=args.output, show=args.show)
+            plot_tree_ete(
+                tree, args.tree_layout, output_image=args.output, show=args.show
+            )
 
 
 class Command_TreeMap(CommandLinePlugin):
-    command = 'treemap'
+    command = "treemap"
     description = """\
 Build a treemap with proportional representation of a metagenome taxonomy.
 """
@@ -2350,19 +2553,29 @@ Build a treemap with proportional representation of a metagenome taxonomy.
 
     def __init__(self, subparser):
         super().__init__(subparser)
-        subparser.add_argument('inputfile', help='input taxonomy - by default, csv_summary output from tax metagenome')
-        subparser.add_argument('-o', '--output', required=True,
-                               help='output figure to this file')
-        subparser.add_argument('-r', '--rank', default='phylum',
-                               help='display at this rank')
-        subparser.add_argument('-n', '--num-to-display', type=int,
-                               default=25,
-                               help="display at most these many taxa; aggregate the remainder (default: 25; 0 to display all)")
-        subparser.add_argument('--taxburst-json',
-                               action='store_true',
-                               help='input format is JSON from taxburst')
+        subparser.add_argument(
+            "inputfile",
+            help="input taxonomy - by default, csv_summary output from tax metagenome",
+        )
+        subparser.add_argument(
+            "-o", "--output", required=True, help="output figure to this file"
+        )
+        subparser.add_argument(
+            "-r", "--rank", default="phylum", help="display at this rank"
+        )
+        subparser.add_argument(
+            "-n",
+            "--num-to-display",
+            type=int,
+            default=25,
+            help="display at most these many taxa; aggregate the remainder (default: 25; 0 to display all)",
+        )
+        subparser.add_argument(
+            "--taxburst-json",
+            action="store_true",
+            help="input format is JSON from taxburst",
+        )
 
-        
     def main(self, args):
         super().main(args)
         plot_treemap(args)
@@ -2371,25 +2584,28 @@ Build a treemap with proportional representation of a metagenome taxonomy.
 def plot_treemap(args):
     from string import ascii_lowercase
     import itertools
-    cmap = colormaps['viridis']
+
+    cmap = colormaps["viridis"]
 
     if not args.taxburst_json:
         df = pd.read_csv(args.inputfile)
 
         print(f"reading input file '{args.inputfile}'")
-        for colname in ('query_name', 'rank', 'f_weighted_at_rank', 'lineage'):
+        for colname in ("query_name", "rank", "f_weighted_at_rank", "lineage"):
             if colname not in df.columns:
-                print(f"input is missing column '{colname}'; is this a csv_summary file?")
+                print(
+                    f"input is missing column '{colname}'; is this a csv_summary file?"
+                )
                 sys.exit(-1)
 
-        df = df.sort_values(by='f_weighted_at_rank')
+        df = df.sort_values(by="f_weighted_at_rank")
 
         # select rank
-        df2 = df[df['rank'] == args.rank]
-        df2['name'] = df2['lineage'].apply(lambda x: x.split(';')[-1])
+        df2 = df[df["rank"] == args.rank]
+        df2["name"] = df2["lineage"].apply(lambda x: x.split(";")[-1])
 
-        fractions = list(df2['f_weighted_at_rank'].tolist())
-        names = list(df2['name'].tolist())
+        fractions = list(df2["f_weighted_at_rank"].tolist())
+        names = list(df2["name"].tolist())
         fractions.reverse()
         names.reverse()
     else:
@@ -2397,29 +2613,29 @@ def plot_treemap(args):
         top_nodes = load_taxburst_json(args.inputfile)
 
         all_nodes = taxburst.tree_utils.collect_all_nodes(top_nodes)
-        all_nodes = [ n for n in all_nodes if n["rank"] == args.rank ]
-        unclass = [ n for n in top_nodes if n["name"] == "unclassified" ]
+        all_nodes = [n for n in all_nodes if n["rank"] == args.rank]
+        unclass = [n for n in top_nodes if n["name"] == "unclassified"]
         if unclass:
             assert len(unclass) == 1
             all_nodes.append(unclass[0])
 
         all_nodes.sort(key=lambda n: -n["count"])
-        fractions = [ n["count"] for n in all_nodes ]
-        names = [ n["name"] for n in all_nodes ]
+        fractions = [n["count"] for n in all_nodes]
+        names = [n["name"] for n in all_nodes]
 
-    num = max(args.num_to_display, 0) # non-negative
-    num = min(args.num_to_display, len(names)) # list of names
+    num = max(args.num_to_display, 0)  # non-negative
+    num = min(args.num_to_display, len(names))  # list of names
     if num:
         display_fractions = fractions[:num]
         display_names = names[:num]
 
-        print(f'treemap: displaying {num} taxa of {len(fractions)} total')
+        print(f"treemap: displaying {num} taxa of {len(fractions)} total")
         if fractions[num:]:
             remaining = fractions[num:]
             remainder = sum(remaining)
             display_fractions.append(remainder)
-            display_names.append(f'{len(remaining)} remaining taxa')
-            print(f'aggregating {len(remaining)} remaining taxa into one box')
+            display_names.append(f"{len(remaining)} remaining taxa")
+            print(f"aggregating {len(remaining)} remaining taxa into one box")
 
         fractions, names = display_fractions, display_names
 
@@ -2436,11 +2652,14 @@ def plot_treemap(args):
     # Create treemap
     fig, ax = plt.subplots(figsize=(8, 6))
 
-    squarify.plot(sizes=fractions, label=labels,
-                  alpha=0.7, ax=ax,
-                  color=cmap(numpy.linspace(1, 0, len(labels)))
+    squarify.plot(
+        sizes=fractions,
+        label=labels,
+        alpha=0.7,
+        ax=ax,
+        color=cmap(numpy.linspace(1, 0, len(labels))),
     )
-    plt.axis('off')
+    plt.axis("off")
 
     # Position the text on the right side
     # The x-coordinate (1.05) places the text slightly outside the right edge of the axes.
@@ -2451,8 +2670,15 @@ def plot_treemap(args):
 
     for i, (name, label, f) in enumerate(zip(names, labels, fractions)):
         y_position = 0.95 - (i * 0.035)  # Adjust for desired spacing and starting point
-        ax.text(1.03, y_position, f'{label}: {name} ({f*100:.1f}%)',
-                ha='left', va='center', transform=ax.transAxes, fontsize=10)
+        ax.text(
+            1.03,
+            y_position,
+            f"{label}: {name} ({f*100:.1f}%)",
+            ha="left",
+            va="center",
+            transform=ax.transAxes,
+            fontsize=10,
+        )
 
     plt.tight_layout()
 
