@@ -1171,6 +1171,9 @@ class Command_WeightedUpset(CommandLinePlugin):
                        help='save intersections to a file, to avoid expensive recalculations')
         p.add_argument('--load-intersections-from-file', default=None,
                        help='load precalculated intersections from a file')
+        p.add_argument('--threshold-hashes', default=10,
+                       type=int,
+                       help='eliminate intersections with counts below this number')
 
 #        p.add_argument('--save-names-to-file', default=None,
 #                       help='save set names to a file, for editing & customization')
@@ -1292,11 +1295,12 @@ class Command_WeightedUpset(CommandLinePlugin):
                     ss = combo.pop()
                     hashes.intersection_update(ss.minhash.hashes)
 
-                if hashes:
+                if len(hashes) >= args.threshold_hashes:
                     weighted_count = sum([ abunds[h] for h in hashes ])
                     counts.append(weighted_count * scaled)
                     nonzero_names.append(names[n])
-                    subtract_me.update(hashes)
+                    
+                subtract_me.update(hashes)
             notify(f"\n...done! {len(nonzero_names)} non-empty intersections of {len(names)} total.")
 
             # maybe decrease memory, but also prevent re/mis-use of these :)
