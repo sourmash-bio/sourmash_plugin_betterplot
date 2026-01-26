@@ -1174,6 +1174,7 @@ class Command_WeightedUpset(CommandLinePlugin):
         p.add_argument('--threshold-hashes', default=10,
                        type=int,
                        help='eliminate intersections with counts below this number')
+        p.add_argument('-f', '--force', action='store_true')
 
 #        p.add_argument('--save-names-to-file', default=None,
 #                       help='save set names to a file, for editing & customization')
@@ -1233,8 +1234,12 @@ class Command_WeightedUpset(CommandLinePlugin):
         for sub_ss in siglist[1:]:
             cont = sub_ss.minhash.contained_by(main_mh)
             if cont < 0.99:
-                notify("ERROR: sketch '{sub_ss.name}' not entirely contained by first sketch '{main_ss.name}'; cont={cont:.03f}")
-                is_ok = False
+                notify(f"ERROR: sketch '{sub_ss.name}' not entirely contained by first sketch '{main_ss.name}'; cont={cont:.03f}")
+                if args.force:
+                    notify("continuing past error")
+                else:
+                    is_ok = False
+                
 
         if not is_ok:
             notify("at least one unrecoverable error found... exiting.")
