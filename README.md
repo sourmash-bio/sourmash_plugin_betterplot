@@ -43,13 +43,13 @@ and who knows what else??
 
 ### What does this plugin provide?
 
-As of v0.5.3 (July 2025), the betterplot plugin provides:
+As of v0.5.7 (Jan 2026), the betterplot plugin provides:
 
 * improved similarity matrix visualization, along with cluster extraction;
 * multidimensional scaling (MDS) plots;
 * t-Stochastic Neighbor Embedding (tSNE) plots;
 * non-square matrix visualization for the output of `manysearch`;
-* an upset plot to visualize intersections between sketches;
+* weighted and unweighted upset plots to visualize intersections between sketches;
 * weighted and unweighted Venn diagrams to visualize overlaps between sketches;
 * a sankey diagram to visualize taxonomic profiling;
 * neighbor-joining trees;
@@ -381,6 +381,31 @@ produces:
 
 ![upset plot of 10 sketches intersections](examples/10sketches.upset.png)
 
+### `weighted_upset` - plot N-way sketch intersections using upset plots
+
+Plot a weighted [UpSetPlot](https://upsetplot.readthedocs.io/en/stable/) of
+the intersections between sketches, where the first sketch has abundances
+(e.g. is from a metagenome) and all of the intersections are weighted with
+the abundances from that first sketch.
+
+This only makes sense when the first sketch includes all of the k-mers
+in any of the sketches, and the code enforces that constraint
+(although you can use `-f` to force the situation). This is most applicable
+in situations where all of the sketches derive from the same data set and
+you're trying to understand the partitioning between data sets, e.g.
+you have a metagenome and you've assembled it with different parameters
+and you want to see how the different assemblies shake out.
+
+This command:
+```
+sourmash scripts weighted_upset sketches/SRR606249.sub.sig.zip \
+    sketches/47.sig.zip -o weighted_upset.png -f
+```
+
+produces:
+
+![weighted upset plot of 2 sketch intersection](examples/weighted_upset.png)
+
 ### `venn` - plot 2- or 3-way sketch intersections using Venn diagrams
 
 Plot a Venn diagram of the intersections between two or three sketches.
@@ -404,7 +429,7 @@ the metagenome, *except* for those k-mers in the second sketch.  This
 shows how much of the mixture (the first sketch) is accounted for by
 the k-mers in the second sketch. (We recognize this is conceptually
 incoherent, but it is nonetheless useful.) This approximates the fraction
-of the total metagenome dataset will map to the genome.
+of the total metagenome dataset that will map to the genome.
 
 This command:
 ```

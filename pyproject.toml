@@ -3,7 +3,7 @@ name = "sourmash_plugin_betterplot"
 description = "sourmash plugin for improved plotting/viz and cluster examination."
 readme = "README.md"
 requires-python = ">=3.11"
-version = "0.5.6"
+version = "0.5.7"
 
 # note: "legacy_cgi" is currently needed for ete3, but may need to be changed on next ete release, see: https://github.com/etetoolkit/ete/issues/780
 dependencies = ["sourmash>=4.9.4,<5", "sourmash_utils>=0.2",
@@ -27,6 +27,7 @@ mds2_command = "sourmash_plugin_betterplot:Command_MDS2"
 pairwise_to_matrix = "sourmash_plugin_betterplot:Command_PairwiseToMatrix"
 clustermap1_command = "sourmash_plugin_betterplot:Command_Clustermap1"
 upset_command = "sourmash_plugin_betterplot:Command_Upset"
+weighted_upset_command = "sourmash_plugin_betterplot:Command_WeightedUpset"
 cluster_to_categories_command = "sourmash_plugin_betterplot:Command_ClusterToCategories"
 tsne_command = "sourmash_plugin_betterplot:Command_TSNE"
 tsne2_command = "sourmash_plugin_betterplot:Command_TSNE2"

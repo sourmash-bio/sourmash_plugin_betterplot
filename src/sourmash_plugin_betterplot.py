@@ -1224,6 +1224,222 @@ class Command_Upset(CommandLinePlugin):
         # @CTB use 'notify'
 
 
+class Command_WeightedUpset(CommandLinePlugin):
+    command = "weighted_upset"  # 'scripts <command>'
+    description = "visualize intersections of sketches using upsetplot, with weighted k-mers"  # output with -h
+    usage = "sourmash scripts weighted_upset <sketches> [<sketches> ...] -o <output>.png"  # output with no args/bad args as well as -h
+    epilog = epilog  # output with -h
+    formatter_class = argparse.RawTextHelpFormatter  # do not reformat multiline
+
+    def __init__(self, p):
+        super().__init__(p)
+        p.add_argument('sketches', nargs='+')
+        p.add_argument('--no-show-singletons', action='store_true',
+                       help='show membership of single sketches as well')
+        p.add_argument('-o', '--output-figure', required=True)
+        p.add_argument('--truncate-labels-at', default=30, type=int,
+                       help="limit labels to this length (default: 30)")
+        sourmash_utils.add_standard_minhash_args(p)
+        p.add_argument('--sort-by', default='cardinality',
+                       choices=['cardinality', 'degree', '-cardinality', '-degree'],
+                       help='sort display by size of intersection, or number of categories intersected')
+        p.add_argument('--min-subset-size', default="0%",
+                       type=str,
+                       help="omit sets below this size or percentage (default: '0%%')")
+        p.add_argument('--show-percentages', action="store_true",
+                       help='show percentages on plot')
+        p.add_argument('--save-intersections-to-file', default=None,
+                       help='save intersections to a file, to avoid expensive recalculations')
+        p.add_argument('--load-intersections-from-file', default=None,
+                       help='load precalculated intersections from a file')
+        p.add_argument('--threshold-hashes', default=10,
+                       type=int,
+                       help='eliminate intersections with counts below this number')
+        p.add_argument('-f', '--force', action='store_true')
+
+#        p.add_argument('--save-names-to-file', default=None,
+#                       help='save set names to a file, for editing & customization')
+#        p.add_argument('--load-names-from-file', default=None,
+#                       help='load set names from a file to customize plots')
+
+    def main(self, args):
+        super().main(args)
+
+        # https://docs.python.org/3/library/itertools.html
+        def powerset(iterable, *, start=2):
+            "powerset([1,2,3]) → () (1,) (2,) (3,) (1,2) (1,3) (2,3) (1,2,3)"
+            s = list(iterable)
+            return chain.from_iterable(combinations(s, r) for r in range(start, len(s)+1))
+
+        select_mh = sourmash_utils.create_minhash_from_args(args)
+        print(f"selecting sketches: {select_mh}")
+        scaled = select_mh.scaled
+
+        siglist = []
+        for filename in args.sketches:
+            print(f"loading sketches from file {filename}")
+            db = sourmash_utils.load_index_and_select(filename, select_mh)
+
+            # downsample?
+            for ss in db.signatures():
+                if ss.minhash.scaled != scaled:
+                    with ss.update() as ss:
+                        ss.minhash = ss.minhash.downsample(scaled=scaled)
+                siglist.append(ss)
+
+        notify(f"Loaded {len(siglist)} signatures & downsampled to scaled={scaled}")
+
+        names_check = [ ss.name for ss in siglist ]
+        if len(set(names_check)) != len(names_check):
+            notify("ERROR: duplicate names or sketches; please fix!!")
+            cnt = Counter(names_check)
+            for k, v in cnt.most_common():
+                if v > 1:
+                    print(f"\t* {k} shows up {v} times")
+            sys.exit(-1)
+
+        # @CTB: check scaled, ksize, etc.
+
+        if not siglist:
+            notify(f"ERROR: found no sketches. Exiting!")
+            sys.exit(-1)
+
+        notify(f"Extracting first sketch '{siglist[0].name}'as the containing sketch.")
+        main_ss = siglist[0]
+        main_mh = main_ss.minhash
+        is_ok = True
+        if not main_mh.track_abundance:
+            notify("ERROR: first sketch must be weighted.")
+            is_ok = False
+
+        for sub_ss in siglist[1:]:
+            cont = sub_ss.minhash.contained_by(main_mh)
+            if cont < 0.99:
+                notify(f"ERROR: sketch '{sub_ss.name}' not entirely contained by first sketch '{main_ss.name}'; cont={cont:.03f}")
+                if args.force:
+                    notify("continuing past error")
+                else:
+                    is_ok = False
+                
+
+        if not is_ok:
+            notify("at least one unrecoverable error found... exiting.")
+            sys.exit(-1)
+
+        if len(siglist) > 10:
+            notify(f"WARNING: this is probably too many sketches.")
+
+        start = 2
+        if args.no_show_singletons:
+            notify(f"Omitting individual sketch membership because of --no-show-singletons to see.")
+        else:
+            start = 1
+            print('XXX start=1')
+
+        pset = list(powerset(siglist, start=start))
+        pset.sort(key=lambda x: -len(x))
+        #get_name = lambda x: [ ss.name.split(' ')[0] for ss in x ]
+        truncate_at = args.truncate_labels_at
+        truncate_name = lambda x: x[:truncate_at-3] + '...' if len(x) >= truncate_at else x
+        get_name = lambda x: [ truncate_name(ss.name) for ss in x ]
+        names = [ get_name(combo) for combo in pset ]
+
+        notify(f"powerset of distinct combinations: {len(pset)}")
+
+        # CTB: maybe turn the intersection code below into a class?
+
+        if args.load_intersections_from_file:
+            notify(f"loading intersections from '{args.load_intersections_from_file}'")
+            with open(args.load_intersections_from_file, 'rb') as fp:
+                check_names, nonzero_names, counts = pickle.load(fp)
+
+            # confirm!
+            if check_names != names:
+                error("ERROR: saved intersections do not match provided sketches!?")
+                sys.exit(-1)
+        else:
+            notify(f"generating intersections...")
+            counts = []
+            nonzero_names = []
+            subtract_me = set()
+            abunds = main_mh.hashes
+            main_hashes = set(abunds)
+            for n, combo in enumerate(pset):
+                if n and n % 10 == 0:
+                    notify(f"...{n} of {len(pset)}", end="\r")
+
+                combo = list(combo)
+                ss = combo.pop()
+                hashes = set(ss.minhash.hashes) - subtract_me
+
+                # do this just in case there are a small number of
+                # novel hashes, e.g. sometimes assembly creates new
+                # k-mers.
+                hashes.intersection_update(main_hashes)
+
+                while combo and hashes:
+                    ss = combo.pop()
+                    hashes.intersection_update(ss.minhash.hashes)
+
+                if len(hashes) >= args.threshold_hashes:
+                    weighted_count = sum([ abunds[h] for h in hashes ])
+                    counts.append(weighted_count * scaled)
+                    nonzero_names.append(names[n])
+                    
+                subtract_me.update(hashes)
+            notify(f"\n...done! {len(nonzero_names)} non-empty intersections of {len(names)} total.")
+
+            # maybe decrease memory, but also prevent re/mis-use of these :)
+            del subtract_me
+            del hashes
+#            del names
+
+            if args.save_intersections_to_file:
+                notify(f"saving intersections to '{args.save_intersections_to_file}'")
+                with open(args.save_intersections_to_file, 'wb') as fp:
+                    pickle.dump((names, nonzero_names, counts), fp)
+
+#        if args.save_names_to_file:
+#            with open(args.save_names_to_file, 'w', newline='') as fp:
+#                w = csv.writer(fp)
+#                w.writerow(['sort_order', 'name'])
+#                for n, name in enumerate(names):
+#                    w.writerow([n, name])
+#            notify(f"saved {len(names)} names to '{args.save_names_to_file}'")
+
+#        if args.load_names_from_file:
+#            with open(args.load_names_from_file, 'r', newline='') as fp:
+#                r = csv.DictReader(fp)
+#                rows = list(r)
+#                if 'sort_order' not in rows[0].keys():
+#                    error("'sort_order' must be a column in names file '{args.load_names_from_file}'")
+#                if 'name' not in rows[0].keys():
+#                    error("'name' must be a column in names file '{args.load_names_from_file}'")
+#
+#                rows.sort(key=lambda x: int(x["sort_order"]))
+#                names = [ row["name"] for row in rows ]
+#            notify("loaded {len(names)} names from '{args.load_names_from_file}'")
+
+        ## now! calculate actual data for upsetplot...
+
+        data = upsetplot.from_memberships(nonzero_names, counts)
+
+        try:
+            min_subset_size = float(args.min_subset_size)
+            notify(f"setting min_subset_size={min_subset_size:g} (number)")
+        except ValueError:
+            min_subset_size = args.min_subset_size
+            notify(f"setting min_subset_size='{min_subset_size}' (percentage)")
+
+        upsetplot.plot(data, sort_by=args.sort_by,
+                       min_subset_size=min_subset_size,
+                       show_percentages=args.show_percentages)
+
+        notify(f"saving upsetr figure to '{args.output_figure}'")
+        plt.savefig(args.output_figure, bbox_inches="tight")
+        # @CTB use 'notify'
+        
+
 def plot_tsne(matrix, *, colors=None, category_map=None):
     perplexity = min(len(matrix) - 1, 50)
     tsne = TSNE(n_components=2, random_state=42, perplexity=perplexity)
