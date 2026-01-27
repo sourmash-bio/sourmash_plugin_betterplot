@@ -310,7 +310,7 @@ rule weighted_upset:
         png="weighted_upset.png",
     shell: """
         sourmash scripts weighted_upset {input.metag} {input.genome} \
-           -o {output} --f
+           -o {output} -f
     """
 
 rule sankey_mgx_summary:
