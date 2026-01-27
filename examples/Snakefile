@@ -17,6 +17,7 @@ rule all:
         "tsne2.64sketches.cmp.png",
         "3sketches.venn.png",
         "weighted_venn.png",
+        "weighted_upset.png",
         "tax-mg.sankey.png",
         "tax-annot.sankey.png",
         "taxburst.sankey.html",
@@ -299,6 +300,17 @@ rule weighted_venn:
     shell: """
         sourmash scripts weighted_venn {input.metag} {input.genome} \
            -o {output} --ident
+    """
+
+rule weighted_upset:
+    input:
+        metag="sketches/SRR606249.sub.sig.zip",
+        genome="sketches/47.sig.zip",
+    output:
+        png="weighted_upset.png",
+    shell: """
+        sourmash scripts weighted_upset {input.metag} {input.genome} \
+           -o {output} --f
     """
 
 rule sankey_mgx_summary:
