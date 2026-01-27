@@ -11,7 +11,9 @@ categories. It also includes support for sparse comparison output
 formats produced by the fast multithreaded `manysearch` and `pairwise`
 functions in the
 [branchwater plugin for sourmash](https://github.com/sourmash-bio/sourmash_plugin_branchwater).
-Finally, it includes a sankey/alluvial flow plot to visualize metagenomic profiling from the `sourmash gather` to `sourmash tax` workflow.
+Finally, it includes a sankey/alluvial flow plot and a treemap plot to
+visualize metagenomic profiling from the `sourmash gather` to
+`sourmash tax` workflow.
 
 ## Why does this plugin exist?
 
@@ -41,14 +43,18 @@ and who knows what else??
 
 ### What does this plugin provide?
 
-As of v0.4, the betterplot plugin provides:
+As of v0.5.3 (July 2025), the betterplot plugin provides:
 
 * improved similarity matrix visualization, along with cluster extraction;
 * multidimensional scaling (MDS) plots;
 * t-Stochastic Neighbor Embedding (tSNE) plots;
 * non-square matrix visualization for the output of `manysearch`;
 * an upset plot to visualize intersections between sketches;
-* sankey diagram to visualize taxonomic profiling;
+* weighted and unweighted Venn diagrams to visualize overlaps between sketches;
+* a sankey diagram to visualize taxonomic profiling;
+* neighbor-joining trees;
+* a treemap diagram to visualize taxonomic profiling in a proportional way;
+* a presence/abundance scatterplot display to display genome membership in mixtures;
 * a utility function to convert `pairwise` output into a similarity matrix;
 * a utility function to convert `cluster` output into color categories;
 
@@ -389,6 +395,28 @@ produces:
 
 ![venn diagram of 3 sketches intersections](examples/3sketches.venn.png)
 
+### `weighted_venn` - plot 2-way sketch intersections using Venn diagrams
+
+Plot a Venn diagram of the intersections between two sketches, where
+one of the sketches has abundances (e.g. is from a metagenome).  The
+resulting Venn diagram is weighted by the multiplicity of k-mers in
+the metagenome, *except* for those k-mers in the second sketch.  This
+shows how much of the mixture (the first sketch) is accounted for by
+the k-mers in the second sketch. (We recognize this is conceptually
+incoherent, but it is nonetheless useful.) This approximates the fraction
+of the total metagenome dataset will map to the genome.
+
+This command:
+```
+sourmash scripts weighted_venn sketches/SRR606249.sub.sig.zip \
+    sketches/47.sig.zip \
+    -o weighted_venn.png --ident
+```
+
+produces:
+
+![weighted venn diagram of 2 sketch intersection](examples/weighted_venn.png)
+
 ### `sankey` - plot Sankey / Alluvial flow plot from sourmash taxonomy outputs
 
 Plot a flow diagram reflecting the taxonomic profiling from sourmash `gather` -> `sourmash tax`.
@@ -411,10 +439,15 @@ produces:
 
 By default, we will open an interactive `html` file. To output to a file, specify the file name with `-o` and use your desired filetype extension (.html, .png, .jpg, .jpeg, .pdf, or .svg). To specify the title, use `--title`.
 
+The `sankey` command also supports ingest of
+[taxburst's JSON format](https://taxburst.github.io/taxburst/command-line/#outputting-json-format),
+which allows `sankey` to be used with SingleM and Krona formats, among
+others.
 
 ### `tree` - plot Neighbor-Joining tree
 
-Plot a NJ tree from 'sourmash compare' or 'sourmash pairwise' output.
+Plot a Neighbor Joining tree from 'sourmash compare' or 'sourmash
+pairwise' output.
 
 
 These commands use `sourmash compare`:
@@ -432,16 +465,55 @@ sourmash sig cat sketches/{2,47,48,49,51,52,53,59,60,63}.sig.zip \
     -o 10sketches.sig.zip
 sourmash scripts pairwise 10sketches.sig.zip --write-all -o 10sketches.pairwise.csv
 
-sourmash scripts tree --pairwise 10sketches.pairwise.csv --save-image 10sketches.pairwise-cmp.tree.png
+sourmash scripts tree --pairwise 10sketches.pairwise.csv -o 10sketches.pairwise-cmp.tree.png
 ```
 
 and each will produce this plot:
 
-![NJ tree](examples/disttree10sketches.pairwise.png)
+![neighbor joining tree](examples/disttree10sketches.pairwise.png)
 
- To output the image to a file, specify the file name with `-o` and use your desired filetype extension (.html, .png, .jpg, .jpeg, .pdf, or .svg). To save the tree in newick format, use `--newick` and specify a file ending with '.nwk'. To open an interactive viewer for the tree file, use `--show`. Note: this requires an X display; do not use it without display capacity, as is will cause the tree command to fail.
+ To output the image to a file, specify the file name with `-o` and use your desired filetype extension (.html, .png, .jpg, .jpeg, .pdf, or .svg). To save the tree in newick format, use `--newick` and specify a file ending with '.nwk'. To open an interactive viewer for the tree file, use `--show`. Note: this requires an X display; do not use it without display capacity, as it will cause the tree command to fail.
 
+### `treemap` - plot a treemap summary of a taxonomy
 
+treemaps provide intuitive proportional visualization of taxonomic
+breakdowns of metagenomes.
+
+This command:
+```
+sourmash scripts treemap tax/test.tax-mg.summarized.csv -o tax-mg.treemap.png
+```
+
+produces:
+
+![treemap visualization](examples/tax-mg.treemap.png)
+
+The `treemap` command also supports ingest of
+[taxburst's JSON format](https://taxburst.github.io/taxburst/command-line/#outputting-json-format),
+which allows `treemap` to be used with SingleM and Krona formats, among
+others.
+
+### `presence_filter` - plot presence/abundance scatterplot of genomes detected by gather
+
+It is sometimes interesting to look at the distribution of size and abundance
+of detected genomes, as output by `sourmash gather` (or `sourmash prefetch`).
+
+This command:
+```
+sourmash scripts presence_filter \
+    tax/SRR11125891.gather.with-lineages.csv \
+    -o presence_filter.png \
+    -N 10 \
+    --green-color Entero --red-color Clostr
+```
+
+produces:
+
+![presence filter scatterplot](examples/presence_filter.png)
+
+which shows all matches with at least 10 hashes (here, 100kb),
+with green dots indicating those matches with "Entero" in the genome name,
+and red dots indicating those matches with "Clostr" in the genome name.
 
 ## Support
 

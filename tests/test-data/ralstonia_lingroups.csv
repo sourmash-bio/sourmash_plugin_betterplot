@@ -1,0 +1,16 @@
+name,lin
+Ralstonia solanacearum,864;0;0;1;0;0
+phylotype iic,864;0;0;1;0;0;0;0;0;0;0;0;0
+phylotype iia,864;0;0;1;0;0;0;0;1
+phylotype iib,864;0;0;1;0;0;0;1
+sequevar 1,864;0;0;1;0;0;0;1;0;0;0;0;0;0;0
+sequevar 2,864;0;0;1;0;0;0;1;0;0;0;0;0;0;1
+sequevar 25p,864;0;0;1;0;0;0;1;0;0;0;0;1
+sequevar 3,864;0;0;1;0;0;0;1;0;1;0
+sequevar 4,864;0;0;1;0;0;0;1;1;0;0
+Ralstonia pseudosolanacearum,864;0;0;1;0;1
+phylotype i,864;0;0;1;0;1;0;0;0;0;2
+Ralstonia pseudosolanacearum,864;0;0;1;0;1;1
+phylotype iii,864;0;0;1;0;1;1;1;1
+Ralstonia syzygii,864;0;0;1;0;2
+phylotype iv,864;0;0;1;0;2;0;0;0;1;0

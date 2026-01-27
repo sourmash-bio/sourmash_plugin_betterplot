@@ -2,15 +2,15 @@
 name = "sourmash_plugin_betterplot"
 description = "sourmash plugin for improved plotting/viz and cluster examination."
 readme = "README.md"
-requires-python = ">=3.10"
-version = "0.5.1"
+requires-python = ">=3.11"
+version = "0.5.6"
 
 # note: "legacy_cgi" is currently needed for ete3, but may need to be changed on next ete release, see: https://github.com/etetoolkit/ete/issues/780
-dependencies = ["sourmash>=4.9.2,<5", "sourmash_utils>=0.2",
+dependencies = ["sourmash>=4.9.4,<5", "sourmash_utils>=0.2",
                 "matplotlib", "numpy", "scipy", "scikit-learn",
                 "seaborn", "upsetplot", "matplotlib_venn", "pandas",
                 "plotly", "biopython", "ete3", "kaleido", "pyqt5",
-                "legacy_cgi"]
+                "legacy_cgi", "squarify==0.4.4", "taxburst>=0.3.1"]
 
 [build-system]
 requires = ["setuptools>=61.0"]
@@ -32,6 +32,8 @@ cluster_to_categories_command = "sourmash_plugin_betterplot:Command_ClusterToCat
 tsne_command = "sourmash_plugin_betterplot:Command_TSNE"
 tsne2_command = "sourmash_plugin_betterplot:Command_TSNE2"
 venn = "sourmash_plugin_betterplot:Command_Venn"
+weighted_venn = "sourmash_plugin_betterplot:Command_WeightedVenn"
 presence_filter = "sourmash_plugin_betterplot:Command_PresenceFilter"
 sankey = "sourmash_plugin_betterplot:Command_Sankey"
 tree = "sourmash_plugin_betterplot:Command_DistTree"
+treemap = "sourmash_plugin_betterplot:Command_TreeMap"
