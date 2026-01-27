@@ -1,6 +1,7 @@
 """
 Tests for sourmash_plugin_betterplot.
 """
+
 import os
 import pytest
 import math
@@ -11,57 +12,59 @@ from sourmash_tst_utils import SourmashCommandFailed
 from sourmash import sourmash_args
 from collections import defaultdict
 
-from sourmash_plugin_betterplot import (load_labelinfo_csv,
-                                        load_categories_csv_for_labels,
-                                        load_categories_csv,
-                                        manysearch_rows_to_index,
-                                        expand_with_ancestors_sum,
-                                        is_lins_lineage,
-                                        detect_lins,
-                                        rows_to_edges,
-                                        edges_to_links,
-                                        build_links_taxonomy,
-                                        strip_prefix,
-                                        path_to_display,
-                                        make_hover,
-                                        process_csv_for_sankey)
+from sourmash_plugin_betterplot import (
+    load_labelinfo_csv,
+    load_categories_csv_for_labels,
+    load_categories_csv,
+    manysearch_rows_to_index,
+    expand_with_ancestors_sum,
+    is_lins_lineage,
+    detect_lins,
+    rows_to_edges,
+    edges_to_links,
+    build_links_taxonomy,
+    strip_prefix,
+    path_to_display,
+    make_hover,
+    process_csv_for_sankey,
+)
 
 
 def test_run_sourmash(runtmp):
     with pytest.raises(SourmashCommandFailed):
-        runtmp.sourmash('', fail_ok=True)
+        runtmp.sourmash("", fail_ok=True)
 
     print(runtmp.last_result.out)
     print(runtmp.last_result.err)
-    assert runtmp.last_result.status != 0                    # no args provided, ok ;)
+    assert runtmp.last_result.status != 0  # no args provided, ok ;)
 
 
 def test_load_categories():
-    labels_csv = utils.get_test_data('10sketches.cmp.labels_to.csv')
-    cat_csv = utils.get_test_data('10sketches-categories.csv')
+    labels_csv = utils.get_test_data("10sketches.cmp.labels_to.csv")
+    cat_csv = utils.get_test_data("10sketches-categories.csv")
 
     labelinfo = load_labelinfo_csv(labels_csv)
     category_map, colors = load_categories_csv(cat_csv, labelinfo)
 
-    assert len(labelinfo) == 10    # list: number of labels
+    assert len(labelinfo) == 10  # list: number of labels
     assert len(category_map) == 5  # dict: categories -> colors mapping
-    assert len(colors) == 10       # list: labels => colors, in sort order
+    assert len(colors) == 10  # list: labels => colors, in sort order
 
 
 def test_load_categories_for_labels():
-    pairwise_csv = utils.get_test_data('10sketches.pairwise.csv')
-    cat_csv = utils.get_test_data('10sketches-categories.csv')
+    pairwise_csv = utils.get_test_data("10sketches.pairwise.csv")
+    cat_csv = utils.get_test_data("10sketches-categories.csv")
 
     with sourmash_args.FileInputCSV(pairwise_csv) as r:
         rows = list(r)
 
-    sample_d = manysearch_rows_to_index(rows, column_name='query_name')
+    sample_d = manysearch_rows_to_index(rows, column_name="query_name")
 
     category_map, colors = load_categories_csv_for_labels(cat_csv, sample_d)
 
-    assert len(sample_d) == 10     # dict: sample name to sample index
+    assert len(sample_d) == 10  # dict: sample name to sample index
     assert len(category_map) == 5  # dict: categories -> colors mapping
-    assert len(colors) == 10       # list: labels => colors, in sort order
+    assert len(colors) == 10  # list: labels => colors, in sort order
 
 
 def test_expand_with_ancestors_sum_simple_taxonomy():
@@ -78,6 +81,7 @@ def test_expand_with_ancestors_sum_simple_taxonomy():
     assert lineage_map["a;b"] == 1.0
     assert lineage_map["a"] == 1.0
 
+
 def test_expand_with_ancestors_sum_multiple_children():
     rows = [
         {"lineage": "a;b;c1", "frac": 2.0},
@@ -91,6 +95,7 @@ def test_expand_with_ancestors_sum_multiple_children():
     # root a should also be 5.0
     assert lineage_map["a"] == pytest.approx(5.0)
 
+
 def test_is_and_detect_lins():
     assert is_lins_lineage("0;1;2")
     assert not is_lins_lineage("a;1;2")
@@ -100,6 +105,7 @@ def test_is_and_detect_lins():
 
     rows = [{"lineage": "a;b;c"}]
     assert not detect_lins(rows)
+
 
 def test_rows_to_edges_basic():
     rows = [
@@ -147,7 +153,9 @@ def test_build_links_taxonomy_simple():
         {"lineage": "a;b;c", "f_unique_weighted": 0.5},
         {"lineage": "a;b;d", "f_unique_weighted": 0.5},
     ]
-    nodes, links, hovers = build_links_taxonomy(rows, "f_unique_weighted", csv_type="with-lineages")
+    nodes, links, hovers = build_links_taxonomy(
+        rows, "f_unique_weighted", csv_type="with-lineages"
+    )
     assert "a" in nodes and "b" in nodes
     assert any("a → b" in h for h in hovers)
 
@@ -161,6 +169,7 @@ def test_strip_prefix_and_display():
     lin2name = {"1;2": "GroupX"}
     disp = path_to_display("1;2", lin2name)
     assert "GroupX" in disp
+
 
 def test_make_hover_with_lin2name():
     lin2name = {"a;b": "GroupAB"}
@@ -202,11 +211,11 @@ def test_rows_to_edges_collapses_passthrough_2():
 
 
 def test_process_csv_for_sankey_multiple_query_names_annotate(runtmp):
-    input_csv = utils.get_example_data('tax/test.gather.with-lineages.csv')
-    mult_query = runtmp.output('mult-query.csv')
+    input_csv = utils.get_example_data("tax/test.gather.with-lineages.csv")
+    mult_query = runtmp.output("mult-query.csv")
 
     # modify input to have multiple query_name values
-    with open(input_csv, newline="") as inF, open(mult_query, 'w', newline='') as outF:
+    with open(input_csv, newline="") as inF, open(mult_query, "w", newline="") as outF:
         # write directly to outF
         for i, line in enumerate(inF):
             if i == 0:
@@ -225,11 +234,11 @@ def test_process_csv_for_sankey_multiple_query_names_annotate(runtmp):
 
 
 def test_process_csv_for_sankey_multiple_query_names_summarized(runtmp):
-    input_csv = utils.get_example_data('tax/test.tax-mg.summarized.csv')
-    mult_query = runtmp.output('mult-query.csv')
+    input_csv = utils.get_example_data("tax/test.tax-mg.summarized.csv")
+    mult_query = runtmp.output("mult-query.csv")
 
     # modify input to have multiple query_name values
-    with open(input_csv, newline="") as inF, open(mult_query, 'w', newline='') as outF:
+    with open(input_csv, newline="") as inF, open(mult_query, "w", newline="") as outF:
         # write directly to outF
         for i, line in enumerate(inF):
             if i == 0:
@@ -256,22 +265,27 @@ def _links_by_label(nodes, links):
         pairs[(s, t)] = pairs.get((s, t), 0.0) + float(L["value"])
     return pairs
 
+
 def _approx_equal_maps(a, b, tol=1e-9):
     if set(a.keys()) != set(b.keys()):
         return False
     return all(math.isclose(a[k], b[k], rel_tol=1e-9, abs_tol=tol) for k in a.keys())
 
+
 def test_process_csv_annotate_vs_summary():
-    ann_csv = utils.get_example_data('tax/test.gather.with-lineages.csv')
-    sum_csv = utils.get_example_data('tax/test.tax-mg.summarized.csv')
+    ann_csv = utils.get_example_data("tax/test.gather.with-lineages.csv")
+    sum_csv = utils.get_example_data("tax/test.tax-mg.summarized.csv")
 
     nodes_a, links_a, _ = process_csv_for_sankey(ann_csv, csv_type="with-lineages")
     nodes_b, links_b, _ = process_csv_for_sankey(sum_csv, csv_type="csv_summary")
 
     expect = {
-        ("g__Escherichia", "s__Escherichia coli"):      5.815279361459521,
-        ("g__Prevotella",  "s__Prevotella copri"):      5.701254275940707,  # 5.04968235869034 + 0.6515719172503665
-        ("g__Phocaeicola", "s__Phocaeicola vulgatus"):  1.5637726014008795,
+        ("g__Escherichia", "s__Escherichia coli"): 5.815279361459521,
+        (
+            "g__Prevotella",
+            "s__Prevotella copri",
+        ): 5.701254275940707,  # 5.04968235869034 + 0.6515719172503665
+        ("g__Phocaeicola", "s__Phocaeicola vulgatus"): 1.5637726014008795,
     }
 
     pairs_a = _links_by_label(nodes_a, links_a)
@@ -292,8 +306,8 @@ def test_process_csv_annotate_vs_summary():
 
 def test_lins_annotate_vs_summary_equivalence_no_lingroup():
     # Adjust paths to how you vend these fixtures in your test utils
-    ann_csv = utils.get_test_data('SRR29654720_k31_gather.with-lineages.csv')
-    sum_csv = utils.get_test_data('SRR29654720_k31_gather.summarized.no-lingroups.csv')
+    ann_csv = utils.get_test_data("SRR29654720_k31_gather.with-lineages.csv")
+    sum_csv = utils.get_test_data("SRR29654720_k31_gather.summarized.no-lingroups.csv")
 
     # Both files should hit the LINS codepath (detect_lins=True)
     nodes_a, links_a, _ = process_csv_for_sankey(ann_csv, csv_type="with-lineages")
@@ -324,14 +338,18 @@ def test_lins_annotate_vs_summary_equivalence_no_lingroup():
     # They should be the same (within tiny tolerance; values are percentages)
     assert _approx_equal_maps(pairs_a, pairs_b, tol=1e-9)
 
+
 def _is_unlabeled(label: str) -> bool:
     # LINGROUP labels look like "name (lin)"; raw LINS have no '('
     return "(" not in label
 
-def _assert_summary_subset_allow_unlabeled_bridge(summary_pairs, annotate_pairs, tol=1e-9):
+
+def _assert_summary_subset_allow_unlabeled_bridge(
+    summary_pairs, annotate_pairs, tol=1e-9
+):
     # Build adjacency from annotate
     children = defaultdict(set)
-    for (s, t) in annotate_pairs.keys():
+    for s, t in annotate_pairs.keys():
         children[s].add(t)
 
     missing = []
@@ -340,7 +358,9 @@ def _assert_summary_subset_allow_unlabeled_bridge(summary_pairs, annotate_pairs,
     for (src, tgt), v in summary_pairs.items():
         # direct match?
         if (src, tgt) in annotate_pairs:
-            if not math.isclose(annotate_pairs[(src, tgt)], v, rel_tol=1e-9, abs_tol=tol):
+            if not math.isclose(
+                annotate_pairs[(src, tgt)], v, rel_tol=1e-9, abs_tol=tol
+            ):
                 mismatched.append(((src, tgt), annotate_pairs[(src, tgt)], v))
             continue
 
@@ -348,7 +368,9 @@ def _assert_summary_subset_allow_unlabeled_bridge(summary_pairs, annotate_pairs,
         bridged_ok = False
         for mid in children.get(src, ()):
             if _is_unlabeled(mid) and (mid, tgt) in annotate_pairs:
-                if math.isclose(annotate_pairs[(mid, tgt)], v, rel_tol=1e-9, abs_tol=tol):
+                if math.isclose(
+                    annotate_pairs[(mid, tgt)], v, rel_tol=1e-9, abs_tol=tol
+                ):
                     bridged_ok = True
                     break
 
@@ -357,20 +379,27 @@ def _assert_summary_subset_allow_unlabeled_bridge(summary_pairs, annotate_pairs,
 
     msg = []
     if missing:
-        msg.append(f"Missing {len(missing)} links (even with unlabeled bridge): {missing[:5]}...")
+        msg.append(
+            f"Missing {len(missing)} links (even with unlabeled bridge): {missing[:5]}..."
+        )
     if mismatched:
-        msg.append("Value mismatches (annotate vs summary) e.g. " +
-                   "; ".join([f"{k}: {a} vs {b}" for k, a, b in mismatched[:5]]) + " ...")
+        msg.append(
+            "Value mismatches (annotate vs summary) e.g. "
+            + "; ".join([f"{k}: {a} vs {b}" for k, a, b in mismatched[:5]])
+            + " ..."
+        )
     assert not missing and not mismatched, "\n".join(msg)
 
 
 def test_lins_summary_with_lingroup_is_subset_of_annotate_with_lingroup():
-    ann_csv = utils.get_test_data('SRR29654720_k31_gather.with-lineages.csv')
-    lingroups_file = utils.get_test_data('ralstonia_lingroups.csv')
-    sum_csv = utils.get_test_data('SRR29654720_k31_gather.summarized-lingroups.csv')
+    ann_csv = utils.get_test_data("SRR29654720_k31_gather.with-lineages.csv")
+    lingroups_file = utils.get_test_data("ralstonia_lingroups.csv")
+    sum_csv = utils.get_test_data("SRR29654720_k31_gather.summarized-lingroups.csv")
 
     # Both files should hit the LINS codepath (detect_lins=True)
-    nodes_a, links_a, _ = process_csv_for_sankey(ann_csv, csv_type="with-lineages", lingroup_map=lingroups_file)
+    nodes_a, links_a, _ = process_csv_for_sankey(
+        ann_csv, csv_type="with-lineages", lingroup_map=lingroups_file
+    )
     nodes_b, links_b, _ = process_csv_for_sankey(sum_csv, csv_type="csv_summary")
     print("nodes_a:", nodes_a)
     print("nodes_b:", nodes_b)
@@ -387,7 +416,9 @@ def test_lins_summary_with_lingroup_is_subset_of_annotate_with_lingroup():
     leaf_idx_b = nodes_b.index(leaf_display)
     leaf_value_a = sum(L["value"] for L in links_a if L["target"] == leaf_idx_a)
     leaf_value_b = sum(L["value"] for L in links_b if L["target"] == leaf_idx_b)
-    print(f"leaf {leaf_display} values: annotate {leaf_value_a}, summary {leaf_value_b}")
+    print(
+        f"leaf {leaf_display} values: annotate {leaf_value_a}, summary {leaf_value_b}"
+    )
     assert math.isclose(leaf_value_a, leaf_value_b, rel_tol=1e-9, abs_tol=1e-9)
     # check higher-level node too
     higher_lin = "864;0;0;1;0;0"
@@ -398,7 +429,9 @@ def test_lins_summary_with_lingroup_is_subset_of_annotate_with_lingroup():
     higher_idx_b = nodes_b.index(higher_display)
     higher_value_a = sum(L["value"] for L in links_a if L["target"] == higher_idx_a)
     higher_value_b = sum(L["value"] for L in links_b if L["target"] == higher_idx_b)
-    print(f"higher {higher_display} values: annotate {higher_value_a}, summary {higher_value_b}")
+    print(
+        f"higher {higher_display} values: annotate {higher_value_a}, summary {higher_value_b}"
+    )
     assert math.isclose(higher_value_a, higher_value_b, rel_tol=1e-9, abs_tol=1e-9)
 
     # # Compare the flows keyed by (src_label, tgt_label)
