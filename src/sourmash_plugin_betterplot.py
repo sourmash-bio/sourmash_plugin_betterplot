@@ -1050,6 +1050,9 @@ class Command_Upset(CommandLinePlugin):
             "--show-percentages", action="store_true", help="show percentages on plot"
         )
         p.add_argument(
+            "--keep-zero", action="store_true", help="show zero-sized isects"
+        )
+        p.add_argument(
             "--save-intersections-to-file",
             default=None,
             help="save intersections to a file, to avoid expensive recalculations",
@@ -1065,7 +1068,7 @@ class Command_Upset(CommandLinePlugin):
     #        p.add_argument('--load-names-from-file', default=None,
     #                       help='load set names from a file to customize plots')
 
-    def main(self, args):
+    def main(self, args):       # not-weighted upset
         super().main(args)
 
         # https://docs.python.org/3/library/itertools.html
@@ -1121,8 +1124,8 @@ class Command_Upset(CommandLinePlugin):
                 f"Omitting individual sketch membership; use --show-singletons to see."
             )
 
-        pset = list(powerset(siglist, start=start))
-        pset.sort(key=lambda x: -len(x))
+        orig_pset = list(powerset(siglist, start=start))
+        pset = sorted(orig_pset, key=lambda x: -len(x))
         # get_name = lambda x: [ ss.name.split(' ')[0] for ss in x ]
         truncate_at = args.truncate_labels_at
         truncate_name = lambda x: (
@@ -1130,6 +1133,7 @@ class Command_Upset(CommandLinePlugin):
         )
         get_name = lambda x: [truncate_name(ss.name) for ss in x]
         names = [get_name(combo) for combo in pset]
+        orig_names = [get_name(combo) for combo in orig_pset]
 
         notify(f"powerset of distinct combinations: {len(pset)}")
 
@@ -1145,6 +1149,9 @@ class Command_Upset(CommandLinePlugin):
                 error("ERROR: saved intersections do not match provided sketches!?")
                 sys.exit(-1)
         else:
+            # this uses the descending-size-sorted powerset to generate
+            # all intersections, starting with the smallest and then
+            # subtracting the union of all previous from each.
             notify(f"generating intersections...")
             counts = []
             nonzero_names = []
@@ -1161,18 +1168,17 @@ class Command_Upset(CommandLinePlugin):
                     ss = combo.pop()
                     hashes.intersection_update(ss.minhash.hashes)
 
-                if hashes:
+                if hashes or keep_zero:
                     counts.append(len(hashes) * scaled)
                     nonzero_names.append(names[n])
                     subtract_me.update(hashes)
             notify(
-                f"\n...done! {len(nonzero_names)} non-empty intersections of {len(names)} total."
+                f"\n...done! {len(nonzero_names)} intersections of {len(names)} total."
             )
 
             # maybe decrease memory, but also prevent re/mis-use of these :)
             del subtract_me
             del hashes
-            #            del names
 
             if args.save_intersections_to_file:
                 notify(f"saving intersections to '{args.save_intersections_to_file}'")
@@ -1202,6 +1208,23 @@ class Command_Upset(CommandLinePlugin):
 
         ## now! calculate actual data for upsetplot...
 
+        sort_upset_by=args.sort_by
+        if args.sort_by == 'input': # @CTB
+            assert 0
+            # rearrange using 'orig_names'
+            counts_by_name = {}
+            for name, cnt in zip(nonzero_names, counts):
+                counts_by_name[tuple(name)] = cnt
+
+            names = []
+            counts = []
+            for name in orig_names:
+                name = tuple(name)
+                if name in counts_by_name:
+                    names.append(name)
+                    counts.append(count_by_name[name])
+            nonzero_names = names
+
         data = upsetplot.from_memberships(nonzero_names, counts)
 
         try:
@@ -1214,7 +1237,7 @@ class Command_Upset(CommandLinePlugin):
         print(data)
         upsetplot.plot(
             data,
-            sort_by=args.sort_by,
+            sort_by=sort_upset_by,
             min_subset_size=min_subset_size,
             show_percentages=args.show_percentages,
         )
@@ -1241,13 +1264,16 @@ class Command_WeightedUpset(CommandLinePlugin):
                        help="limit labels to this length (default: 30)")
         sourmash_utils.add_standard_minhash_args(p)
         p.add_argument('--sort-by', default='cardinality',
-                       choices=['cardinality', 'degree', '-cardinality', '-degree'],
+                       choices=['cardinality', 'degree', '-cardinality', '-degree', 'input', '-input'],
                        help='sort display by size of intersection, or number of categories intersected')
         p.add_argument('--min-subset-size', default="0%",
                        type=str,
                        help="omit sets below this size or percentage (default: '0%%')")
         p.add_argument('--show-percentages', action="store_true",
                        help='show percentages on plot')
+        p.add_argument(
+            "--keep-zero", action="store_true", help="show zero-sized isects"
+        )
         p.add_argument('--save-intersections-to-file', default=None,
                        help='save intersections to a file, to avoid expensive recalculations')
         p.add_argument('--load-intersections-from-file', default=None,
@@ -1262,8 +1288,10 @@ class Command_WeightedUpset(CommandLinePlugin):
 #        p.add_argument('--load-names-from-file', default=None,
 #                       help='load set names from a file to customize plots')
 
-    def main(self, args):
+    def main(self, args):       # weighted upset
         super().main(args)
+
+        keep_zero = args.keep_zero
 
         # https://docs.python.org/3/library/itertools.html
         def powerset(iterable, *, start=2):
@@ -1334,14 +1362,14 @@ class Command_WeightedUpset(CommandLinePlugin):
             notify(f"Omitting individual sketch membership because of --no-show-singletons to see.")
         else:
             start = 1
-            print('XXX start=1')
 
-        pset = list(powerset(siglist, start=start))
-        pset.sort(key=lambda x: -len(x))
+        orig_pset = list(powerset(siglist, start=start))
+        pset = sorted(orig_pset, key=lambda x: -len(x))
         #get_name = lambda x: [ ss.name.split(' ')[0] for ss in x ]
         truncate_at = args.truncate_labels_at
         truncate_name = lambda x: x[:truncate_at-3] + '...' if len(x) >= truncate_at else x
         get_name = lambda x: [ truncate_name(ss.name) for ss in x ]
+        orig_names = [get_name(combo) for combo in orig_pset]
         names = [ get_name(combo) for combo in pset ]
 
         notify(f"powerset of distinct combinations: {len(pset)}")
@@ -1358,7 +1386,7 @@ class Command_WeightedUpset(CommandLinePlugin):
                 error("ERROR: saved intersections do not match provided sketches!?")
                 sys.exit(-1)
         else:
-            notify(f"generating intersections...")
+            notify(f"generating weighted intersections...")
             counts = []
             nonzero_names = []
             subtract_me = set()
@@ -1381,10 +1409,11 @@ class Command_WeightedUpset(CommandLinePlugin):
                     ss = combo.pop()
                     hashes.intersection_update(ss.minhash.hashes)
 
-                if len(hashes) >= args.threshold_hashes:
-                    weighted_count = sum([ abunds[h] for h in hashes ])
-                    counts.append(weighted_count * scaled)
-                    nonzero_names.append(names[n])
+                if len(hashes) >= args.threshold_hashes or keep_zero:
+                    if len(hashes) > 0 or keep_zero:
+                        weighted_count = sum([ abunds[h] for h in hashes ])
+                        counts.append(weighted_count * scaled)
+                        nonzero_names.append(names[n])
                     
                 subtract_me.update(hashes)
             notify(f"\n...done! {len(nonzero_names)} non-empty intersections of {len(names)} total.")
@@ -1420,7 +1449,23 @@ class Command_WeightedUpset(CommandLinePlugin):
 #                names = [ row["name"] for row in rows ]
 #            notify("loaded {len(names)} names from '{args.load_names_from_file}'")
 
-        ## now! calculate actual data for upsetplot...
+        ## now! calculate actual data for weighted upsetplot...
+
+        sort_upset_by=args.sort_by
+        if args.sort_by in ('-input', 'input'):
+            # rearrange using 'orig_names'
+            counts_by_name = {}
+            for name, cnt in zip(nonzero_names, counts):
+                counts_by_name[tuple(name)] = cnt
+
+            names = []
+            counts = []
+            for name in orig_names:
+                name = tuple(name)
+                if name in counts_by_name:
+                    names.append(name)
+                    counts.append(counts_by_name[name])
+            nonzero_names = names
 
         data = upsetplot.from_memberships(nonzero_names, counts)
 
