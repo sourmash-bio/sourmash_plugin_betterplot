@@ -1009,6 +1009,61 @@ class Command_Clustermap1(CommandLinePlugin):
         notify(f"wrote plot to: {args.output_figure}")
 
 
+# https://docs.python.org/3/library/itertools.html
+def powerset(iterable, *, start=2):
+    "powerset([1,2,3]) → () (1,) (2,) (3,) (1,2) (1,3) (2,3) (1,2,3)"
+    s = list(iterable)
+    return chain.from_iterable(combinations(s, r) for r in range(start, len(s)+1))
+
+def isect_all_sigs(siglist, *, start=1):
+    get_name = lambda x: [ss.name for ss in x]
+    
+    # check: all names are distinct
+    assert len(set(get_name(siglist))) == len(siglist)
+
+    # make a powerset, all combinations
+    orig_pset = [ list(x) for x in powerset(siglist, start=start) ]
+    orig_names = [ get_name(x) for x in orig_pset ]
+
+    # sort most combinations to fewest
+    pset = sorted(orig_pset, key=lambda x: -len(x))
+
+    # walk through, calculating intersections and tracking them.
+    # no hash should appear in more than one set.
+    subtract_me = set()
+    isects = []
+    names_to_hashes = {}
+    for n, combo in enumerate(pset):
+        combo = list(combo)
+        combo_name = get_name(combo)
+        ss = combo.pop()
+        hashes = set(ss.minhash.hashes) - subtract_me
+
+        while combo and hashes:
+            ss = combo.pop()
+            hashes.intersection_update(ss.minhash.hashes)
+
+        # track hashes by combination name so we can re-order later.
+        names_to_hashes[tuple(combo_name)] = hashes
+        subtract_me.update(hashes)
+
+    # use leftover ss to get a minhash :)
+    blank_mh = ss.minhash.copy_and_clear()
+
+    # return list in order of original powerset;
+    # convert hashes to minhash objects
+    combos = []
+    names = []
+    for name in orig_names:
+        hashes = names_to_hashes[tuple(name)]
+        names.append(name)
+        mh = blank_mh.copy_and_clear().flatten()
+        mh.add_many(hashes)
+        combos.append(mh)
+
+    return names, combos
+
+
 class Command_Upset(CommandLinePlugin):
     command = "upset"  # 'scripts <command>'
     description = (
@@ -1071,13 +1126,7 @@ class Command_Upset(CommandLinePlugin):
     def main(self, args):       # not-weighted upset
         super().main(args)
 
-        # https://docs.python.org/3/library/itertools.html
-        def powerset(iterable, *, start=2):
-            "powerset([1,2,3]) → () (1,) (2,) (3,) (1,2) (1,3) (2,3) (1,2,3)"
-            s = list(iterable)
-            return chain.from_iterable(
-                combinations(s, r) for r in range(start, len(s) + 1)
-            )
+        keep_zero = args.keep_zero
 
         select_mh = sourmash_utils.create_minhash_from_args(args)
         print(f"selecting sketches: {select_mh}")
@@ -1124,22 +1173,10 @@ class Command_Upset(CommandLinePlugin):
                 f"Omitting individual sketch membership; use --show-singletons to see."
             )
 
-        orig_pset = list(powerset(siglist, start=start))
-        pset = sorted(orig_pset, key=lambda x: -len(x))
-        # get_name = lambda x: [ ss.name.split(' ')[0] for ss in x ]
-        truncate_at = args.truncate_labels_at
-        truncate_name = lambda x: (
-            x[: truncate_at - 3] + "..." if len(x) >= truncate_at else x
-        )
-        get_name = lambda x: [truncate_name(ss.name) for ss in x]
-        names = [get_name(combo) for combo in pset]
-        orig_names = [get_name(combo) for combo in orig_pset]
-
-        notify(f"powerset of distinct combinations: {len(pset)}")
-
         # CTB: maybe turn the intersection code below into a class?
 
         if args.load_intersections_from_file:
+            assert 0
             notify(f"loading intersections from '{args.load_intersections_from_file}'")
             with open(args.load_intersections_from_file, "rb") as fp:
                 check_names, nonzero_names, counts = pickle.load(fp)
@@ -1153,32 +1190,11 @@ class Command_Upset(CommandLinePlugin):
             # all intersections, starting with the smallest and then
             # subtracting the union of all previous from each.
             notify(f"generating intersections...")
-            counts = []
-            nonzero_names = []
-            subtract_me = set()
-            for n, combo in enumerate(pset):
-                if n and n % 10 == 0:
-                    notify(f"...{n} of {len(pset)}", end="\r")
-
-                combo = list(combo)
-                ss = combo.pop()
-                hashes = set(ss.minhash.hashes) - subtract_me
-
-                while combo and hashes:
-                    ss = combo.pop()
-                    hashes.intersection_update(ss.minhash.hashes)
-
-                if hashes or keep_zero:
-                    counts.append(len(hashes) * scaled)
-                    nonzero_names.append(names[n])
-                    subtract_me.update(hashes)
+            names, combos = isect_all_sigs(siglist, start=start)
+            counts = [ len(c) for c in combos ]
             notify(
-                f"\n...done! {len(nonzero_names)} intersections of {len(names)} total."
+                f"\n...done! {len(names)} intersections of {len(names)} total."
             )
-
-            # maybe decrease memory, but also prevent re/mis-use of these :)
-            del subtract_me
-            del hashes
 
             if args.save_intersections_to_file:
                 notify(f"saving intersections to '{args.save_intersections_to_file}'")
@@ -1208,24 +1224,20 @@ class Command_Upset(CommandLinePlugin):
 
         ## now! calculate actual data for upsetplot...
 
-        sort_upset_by=args.sort_by
-        if args.sort_by == 'input': # @CTB
-            assert 0
-            # rearrange using 'orig_names'
-            counts_by_name = {}
-            for name, cnt in zip(nonzero_names, counts):
-                counts_by_name[tuple(name)] = cnt
+        truncate_at = args.truncate_labels_at
+        truncate_name = lambda x: (
+            x[: truncate_at - 3] + "..." if len(x) >= truncate_at else x
+        )
+        truncate_names = lambda xx: [ truncate_name(x) for x in xx ]
 
-            names = []
-            counts = []
-            for name in orig_names:
-                name = tuple(name)
-                if name in counts_by_name:
-                    names.append(name)
-                    counts.append(count_by_name[name])
-            nonzero_names = names
+        names2 = []
+        counts2 = []
+        for name, count in zip(names, counts):
+            if count > 0 or keep_zero:
+                names2.append(truncate_names(name))
+                counts2.append(count)
 
-        data = upsetplot.from_memberships(nonzero_names, counts)
+        data = upsetplot.from_memberships(names2, counts2)
 
         try:
             min_subset_size = float(args.min_subset_size)
@@ -1237,7 +1249,7 @@ class Command_Upset(CommandLinePlugin):
         print(data)
         upsetplot.plot(
             data,
-            sort_by=sort_upset_by,
+            sort_by=args.sort_by,
             min_subset_size=min_subset_size,
             show_percentages=args.show_percentages,
         )
@@ -1363,16 +1375,9 @@ class Command_WeightedUpset(CommandLinePlugin):
         else:
             start = 1
 
-        orig_pset = list(powerset(siglist, start=start))
-        pset = sorted(orig_pset, key=lambda x: -len(x))
-        #get_name = lambda x: [ ss.name.split(' ')[0] for ss in x ]
         truncate_at = args.truncate_labels_at
         truncate_name = lambda x: x[:truncate_at-3] + '...' if len(x) >= truncate_at else x
         get_name = lambda x: [ truncate_name(ss.name) for ss in x ]
-        orig_names = [get_name(combo) for combo in orig_pset]
-        names = [ get_name(combo) for combo in pset ]
-
-        notify(f"powerset of distinct combinations: {len(pset)}")
 
         # CTB: maybe turn the intersection code below into a class?
 
@@ -1387,41 +1392,11 @@ class Command_WeightedUpset(CommandLinePlugin):
                 sys.exit(-1)
         else:
             notify(f"generating weighted intersections...")
-            counts = []
-            nonzero_names = []
-            subtract_me = set()
-            abunds = main_mh.hashes
-            main_hashes = set(abunds)
-            for n, combo in enumerate(pset):
-                if n and n % 10 == 0:
-                    notify(f"...{n} of {len(pset)}", end="\r")
+            names, combos = isect_all_sigs(siglist)
+            counts = [ mh.inflate(main_mh).sum_abundances for mh in combos ]
 
-                combo = list(combo)
-                ss = combo.pop()
-                hashes = set(ss.minhash.hashes) - subtract_me
-
-                # do this just in case there are a small number of
-                # novel hashes, e.g. sometimes assembly creates new
-                # k-mers.
-                hashes.intersection_update(main_hashes)
-
-                while combo and hashes:
-                    ss = combo.pop()
-                    hashes.intersection_update(ss.minhash.hashes)
-
-                if len(hashes) >= args.threshold_hashes or keep_zero:
-                    if len(hashes) > 0 or keep_zero:
-                        weighted_count = sum([ abunds[h] for h in hashes ])
-                        counts.append(weighted_count * scaled)
-                        nonzero_names.append(names[n])
-                    
-                subtract_me.update(hashes)
-            notify(f"\n...done! {len(nonzero_names)} non-empty intersections of {len(names)} total.")
-
-            # maybe decrease memory, but also prevent re/mis-use of these :)
-            del subtract_me
-            del hashes
-#            del names
+            # @CTB
+            notify(f"\n...done! {len(names)} non-empty intersections of {len(names)} total.")
 
             if args.save_intersections_to_file:
                 notify(f"saving intersections to '{args.save_intersections_to_file}'")
@@ -1451,23 +1426,20 @@ class Command_WeightedUpset(CommandLinePlugin):
 
         ## now! calculate actual data for weighted upsetplot...
 
-        sort_upset_by=args.sort_by
-        if args.sort_by in ('-input', 'input'):
-            # rearrange using 'orig_names'
-            counts_by_name = {}
-            for name, cnt in zip(nonzero_names, counts):
-                counts_by_name[tuple(name)] = cnt
+        truncate_at = args.truncate_labels_at
+        truncate_name = lambda x: (
+            x[: truncate_at - 3] + "..." if len(x) >= truncate_at else x
+        )
+        truncate_names = lambda xx: [ truncate_name(x) for x in xx ]
 
-            names = []
-            counts = []
-            for name in orig_names:
-                name = tuple(name)
-                if name in counts_by_name:
-                    names.append(name)
-                    counts.append(counts_by_name[name])
-            nonzero_names = names
+        names2 = []
+        counts2 = []
+        for name, count in zip(names, counts):
+            if count > 0 or keep_zero:
+                names2.append(truncate_names(name))
+                counts2.append(count)
 
-        data = upsetplot.from_memberships(nonzero_names, counts)
+        data = upsetplot.from_memberships(names2, counts2)
 
         try:
             min_subset_size = float(args.min_subset_size)
