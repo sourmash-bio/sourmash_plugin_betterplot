@@ -1191,7 +1191,7 @@ class Command_Upset(CommandLinePlugin):
             # subtracting the union of all previous from each.
             notify(f"generating intersections...")
             names, combos = isect_all_sigs(siglist, start=start)
-            counts = [ len(c) for c in combos ]
+            counts = [ len(c)*scaled for c in combos ]
             notify(
                 f"\n...done! {len(names)} intersections of {len(names)} total."
             )
@@ -1305,12 +1305,6 @@ class Command_WeightedUpset(CommandLinePlugin):
 
         keep_zero = args.keep_zero
 
-        # https://docs.python.org/3/library/itertools.html
-        def powerset(iterable, *, start=2):
-            "powerset([1,2,3]) → () (1,) (2,) (3,) (1,2) (1,3) (2,3) (1,2,3)"
-            s = list(iterable)
-            return chain.from_iterable(combinations(s, r) for r in range(start, len(s)+1))
-
         select_mh = sourmash_utils.create_minhash_from_args(args)
         print(f"selecting sketches: {select_mh}")
         scaled = select_mh.scaled
@@ -1393,7 +1387,7 @@ class Command_WeightedUpset(CommandLinePlugin):
         else:
             notify(f"generating weighted intersections...")
             names, combos = isect_all_sigs(siglist)
-            counts = [ mh.inflate(main_mh).sum_abundances for mh in combos ]
+            counts = [ mh.inflate(main_mh).sum_abundances*scaled for mh in combos ]
 
             # @CTB
             notify(f"\n...done! {len(names)} non-empty intersections of {len(names)} total.")
